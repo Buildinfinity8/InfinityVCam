@@ -1,38 +1,55 @@
 {
-    "manifest_version" : 3,
+  "manifest_version": 3,
   "name": "InfinityVCam",
-  "version": "1.0",
-  "description" : "This Chrome Extension That Renders a Virtual Cam For your video Call and meetings so that you can show what you want ",
-    "action": {
+  "version": "1.0.0",
+  "description": "The professional virtual camera for Google Meet. Add logos, text, overlays, and custom branding to your video calls.",
+  "permissions": [
+    "storage",
+    "scripting",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "icons": {
+    "16": "files/images/Icon.png",
+    "48": "files/images/Icon.png",
+    "128": "files/images/Icon.png"
+  },
+  "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "images/Icon.png",
-      "48": "images/Icon.png",
-      "128": "images/Icon.png"
+      "16": "files/images/Icon.png",
+      "48": "files/images/Icon.png",
+      "128": "files/images/Icon.png"
     }
   },
-  "permissions": [
-  
-    "storage",
-    "tabs",
-    "activeTab",
-    "scripting"
-  ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "files/scripts/background.js"
   },
-
- "content_scripts": [
+  "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["files/scripts/inject.js"],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["files/scripts/content.js"],
+      "world": "ISOLATED",
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
-   "web_accessible_resources": [
+  "web_accessible_resources": [
     {
-      "resources": ["virtual-cam.js","virtualcam.js"],
+      "resources": [
+        "files/images/*.png", 
+        "files/scripts/inject.js"
+      ],
       "matches": ["<all_urls>"]
     }
   ]
-
 }
