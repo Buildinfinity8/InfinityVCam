@@ -1,0 +1,38 @@
+{
+    "manifest_version" : 3,
+  "name": "InfinityVCam",
+  "version": "1.0",
+  "description" : "This Chrome Extension That Renders a Virtual Cam For your video Call and meetings so that you can show what you want ",
+    "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/Icon.png",
+      "48": "images/Icon.png",
+      "128": "images/Icon.png"
+    }
+  },
+  "permissions": [
+  
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+
+ "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+   "web_accessible_resources": [
+    {
+      "resources": ["virtual-cam.js","virtualcam.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+
+}
