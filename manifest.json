@@ -2,10 +2,9 @@
   "manifest_version": 3,
   "name": "InfinityVCam",
   "version": "1.0.0",
-  "description": "The professional virtual camera for Google Meet. Add logos, text, overlays, and custom branding to your video calls.",
+  "description": "The real professional virtual camera for Google Meet. Add logos, text, overlays, and custom branding to your video calls.",
   "permissions": [
     "storage",
-
     "unlimitedStorage"
   ],
   "host_permissions": [
