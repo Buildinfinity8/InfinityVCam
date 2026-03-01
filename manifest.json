@@ -5,7 +5,7 @@
   "description": "The professional virtual camera for Google Meet. Add logos, text, overlays, and custom branding to your video calls.",
   "permissions": [
     "storage",
-    "scripting",
+
     "unlimitedStorage"
   ],
   "host_permissions": [
