@@ -24,8 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const newImageInput = document.getElementById("newImageFile");
   const imageList = document.getElementById("imageList");
 
-  canvas.width = 480;
-  canvas.height = 270;
+  canvas.width = 1800;
+  canvas.height = 1275;
   let isSynthetic = false;
   
   // State
@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.onload = function(evt) {
           const img = new Image();
           img.onload = () => {
-              const MAX_WIDTH = 400; 
+              const MAX_WIDTH = 1600; 
               const scaleSize = MAX_WIDTH / img.width;
               const c = document.createElement('canvas');
               c.width = MAX_WIDTH;
@@ -355,8 +355,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const constraints = {
         video: { 
             deviceId: { exact: cameraSelect.value },
-            width: { ideal: 1280 }, 
-            height: { ideal: 720 } 
+            width: { ideal: 1600 }, 
+            height: { ideal: 900 } 
         }
     };
 
@@ -392,6 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ctx.textBaseline = "middle";
           ctx.fillText("No Signal", canvas.width/2, canvas.height/2);
       } else {
+        document.querySelector("#cpermition").style.display="none";
           if (flipHInput.checked) {
               ctx.translate(canvas.width, 0);
               ctx.scale(-1, 1);
@@ -401,7 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ctx.scale(1, -1);
           }
           
-          const vW = maincam.videoWidth || 1280;
+          const vW = maincam.videoWidth;
           const previewRatio = canvas.width / vW; 
           const sw = canvas.width * parseFloat(scaleInput.value);
           const sh = canvas.height * parseFloat(scaleInput.value);
