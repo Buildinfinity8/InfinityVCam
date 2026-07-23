@@ -5,11 +5,11 @@
 window.addEventListener("message", (event) => {
     if (event.source !== window) return;
 
-    if (event.data.type && event.data.type === "INFINITY_VCAM_GET_CONFIG") {
+    if (event.data.type && event.data.type === "NORI_VCAM_GET_CONFIG") {
         chrome.storage.local.get(['config'], (result) => {
             const config = result.config || {};
             window.postMessage({
-                type: "INFINITY_VCAM_CONFIG",
+                type: "NORI_VCAM_CONFIG",
                 payload: config
             }, "*");
         });
@@ -20,7 +20,7 @@ window.addEventListener("message", (event) => {
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.config) {
         window.postMessage({
-            type: "INFINITY_VCAM_CONFIG",
+            type: "NORI_VCAM_CONFIG",
             payload: changes.config.newValue
         }, "*");
     }
@@ -31,7 +31,7 @@ chrome.storage.local.get(['config'], (result) => {
     if (result.config) {
         setTimeout(() => {
             window.postMessage({
-                type: "INFINITY_VCAM_CONFIG",
+                type: "NORI_VCAM_CONFIG",
                 payload: result.config
             }, "*");
         }, 100);

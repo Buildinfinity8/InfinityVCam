@@ -1,23 +1,23 @@
 (function() {
-  if (window.InfinityVCamInjected) return;
-  window.InfinityVCamInjected = true;
+  if (window.NoriVCamInjected) return;
+  window.NoriVCamInjected = true;
 
-  console.log("InfinityVCam: Virtual Device Mode Active v1.2.2");
+  console.log("Nori V Cam: Virtual Device Mode Active v1.1.0 — by Omnori");
 
-  const VIRTUAL_DEVICE_ID = "infinity-8-virtual-cam-id";
-  const VIRTUAL_DEVICE_LABEL = "Virtual Camera";
-  const VIRTUAL_GROUP_ID = "infinity-virtual-group";
+  const VIRTUAL_DEVICE_ID = "nori-v-cam-virtual-id";
+  const VIRTUAL_DEVICE_LABEL = "Nori V Cam";
+  const VIRTUAL_GROUP_ID = "nori-v-cam-virtual-group";
 
-  let state = { 
-      scale: 1.2, panX: 0, panY: 0, flipH: false, flipV: false,
-      texts: [], images: [] 
+  let state = {
+      scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false,
+      texts: [], images: []
   };
   
   const loadedImages = {};
 
   window.addEventListener("message", (event) => {
       if (event.source !== window) return;
-      if (event.data && event.data.type === "INFINITY_VCAM_CONFIG") {
+      if (event.data && event.data.type === "NORI_VCAM_CONFIG") {
           state = { ...state, ...event.data.payload };
           // Preload images
           if (state.images) {
@@ -31,7 +31,7 @@
           }
       }
   });
-  window.postMessage({ type: "INFINITY_VCAM_GET_CONFIG" }, "*");
+  window.postMessage({ type: "NORI_VCAM_GET_CONFIG" }, "*");
 
   const hiddenContainer = document.createElement('div');
   hiddenContainer.style = 'position:fixed;top:0;left:0;width:1px;height:1px;overflow:hidden;opacity:0.01;pointer-events:none;z-index:-9999';
@@ -50,10 +50,11 @@
                   
                   ctx.save();
                   ctx.translate(x, y);
+                  if (img.rotation) ctx.rotate(img.rotation * Math.PI / 180);
                   // Apply flips relative to the item's center
                   if (img.flipH) ctx.scale(-1, 1);
                   if (img.flipV) ctx.scale(1, -1);
-                  
+
                   ctx.drawImage(i, -w/2, -h/2, w, h);
                   ctx.restore();
               }
@@ -68,6 +69,7 @@
               const fontSize = txt.size * (width / 800);
               
               ctx.translate(x, y);
+              if (txt.rotation) ctx.rotate(txt.rotation * Math.PI / 180);
               if (txt.flipH) ctx.scale(-1, 1);
               if (txt.flipV) ctx.scale(1, -1);
 
@@ -149,7 +151,12 @@
           // Match #000 background for video
           ctx.fillStyle = "#000"; ctx.fillRect(0, 0, width, height);
           ctx.save();
-          
+
+          if (state.rotation) {
+              ctx.translate(width / 2, height / 2);
+              ctx.rotate(state.rotation * Math.PI / 180);
+              ctx.translate(-width / 2, -height / 2);
+          }
           if (state.flipH) { ctx.translate(width, 0); ctx.scale(-1, 1); }
           if (state.flipV) { ctx.translate(0, height); ctx.scale(1, -1); }
           

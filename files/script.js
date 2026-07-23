@@ -1,4 +1,14 @@
 // UI Helper Script
+
+// Theme toggle (light/dark). Initial theme is set synchronously in
+// popup.html's <head> via localStorage to avoid a flash on open.
+document.getElementById("themeToggle").addEventListener("click", function () {
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("nori-theme", next);
+});
+
 document.getElementById("share").addEventListener("click", function () {
   notif("success", "Link copied to clipboard!");
 });

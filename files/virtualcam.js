@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const scaleInput = document.getElementById("scalerange");
   const panXInput = document.getElementById("leftrightrange");
   const panYInput = document.getElementById("updownrange");
+  const rotateInput = document.getElementById("rotaterange");
   const flipVInput = document.getElementById("flipvertical");
   const flipHInput = document.getElementById("fliphorizontal");
   
@@ -43,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
           
           const target = tab.dataset.tab;
           tabContents.forEach(content => {
-              content.style.display = content.id === `tab-${target}` ? "block" : "none";
+              content.classList.toggle("tab-active", content.id === `tab-${target}`);
           });
       });
   });
@@ -62,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
               let added = false;
               videoDevices.forEach((device, index) => {
-                  if (device.label === "Virtual Camera") return;
+                  if (device.label === "Nori V Cam") return;
                   addOption(device.deviceId, device.label || `Camera ${index + 1}`);
                   added = true;
               });
@@ -95,12 +96,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Configuration Management ---
   function loadConfig() {
       chrome.storage.local.get(['config'], (result) => {
-          const config = result.config || { scale: 1.2, panX: 0, panY: 0, flipH: false, flipV: false, texts: [], images: [] };
-          
+          const config = result.config || { scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false, texts: [], images: [] };
+
           // Basic
           scaleInput.value = config.scale;
           panXInput.value = config.panX;
           panYInput.value = config.panY;
+          rotateInput.value = config.rotation || 0;
           flipHInput.checked = config.flipH;
           flipVInput.checked = config.flipV;
           
@@ -119,6 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
           scale: parseFloat(scaleInput.value),
           panX: parseFloat(panXInput.value),
           panY: parseFloat(panYInput.value),
+          rotation: parseFloat(rotateInput.value),
           flipH: flipHInput.checked,
           flipV: flipVInput.checked,
           texts: overlays.texts,
@@ -132,10 +135,11 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("rangetext").innerText = scaleInput.value + "x";
       document.getElementById("leftrighttext").innerText = panXInput.value;
       document.getElementById("updowntext").innerText = panYInput.value;
+      document.getElementById("rotatetext").innerText = rotateInput.value + "°";
   }
 
   // --- Listeners (Basic) ---
-  [scaleInput, panXInput, panYInput, flipVInput, flipHInput].forEach(el => {
+  [scaleInput, panXInput, panYInput, rotateInput, flipVInput, flipHInput].forEach(el => {
       el.addEventListener('input', saveConfig);
   });
 
@@ -157,6 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
           y: 50,
           size: 40,
           color: "#ffffff",
+          rotation: 0,
           flipH: false,
           flipV: false
       });
@@ -191,6 +196,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="control-group">
                     <label>Color</label>
                     <input type="color" class="update-text-color" data-idx="${index}" data-key="color" value="${item.color}">
+                </div>
+                <div class="control-group">
+                    <label>Rotation</label>
+                    <input type="range" min="-180" max="180" class="update-text" data-idx="${index}" data-key="rotation" value="${item.rotation || 0}">
                 </div>
                 <div class="control-group">
                     <label>Flip H</label>
@@ -264,6 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   x: 50,
                   y: 50,
                   scale: 1.0,
+                  rotation: 0,
                   flipH: false,
                   flipV: false
               });
@@ -298,6 +308,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="control-group">
                     <label>Scale</label>
                     <input type="range" min="0.1" max="3" step="0.1" class="update-img" data-idx="${index}" data-key="scale" value="${item.scale}">
+                </div>
+                <div class="control-group">
+                    <label>Rotation</label>
+                    <input type="range" min="-180" max="180" class="update-img" data-idx="${index}" data-key="rotation" value="${item.rotation || 0}">
                 </div>
                 <div class="control-group">
                     <label>Flip H</label>
@@ -393,6 +407,12 @@ document.addEventListener("DOMContentLoaded", () => {
           ctx.fillText("No Signal", canvas.width/2, canvas.height/2);
       } else {
         document.querySelector("#cpermition").style.display="none";
+          const camRotation = parseFloat(rotateInput.value) || 0;
+          if (camRotation) {
+              ctx.translate(canvas.width / 2, canvas.height / 2);
+              ctx.rotate(camRotation * Math.PI / 180);
+              ctx.translate(-canvas.width / 2, -canvas.height / 2);
+          }
           if (flipHInput.checked) {
               ctx.translate(canvas.width, 0);
               ctx.scale(-1, 1);
@@ -401,7 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ctx.translate(0, canvas.height);
               ctx.scale(1, -1);
           }
-          
+
           const vW = maincam.videoWidth;
           const previewRatio = canvas.width / vW; 
           const sw = canvas.width * parseFloat(scaleInput.value);
@@ -431,6 +451,7 @@ document.addEventListener("DOMContentLoaded", () => {
               
               ctx.save();
               ctx.translate(x, y);
+              if (img.rotation) ctx.rotate(img.rotation * Math.PI / 180);
               if (img.flipH) ctx.scale(-1, 1);
               if (img.flipV) ctx.scale(1, -1);
               ctx.drawImage(i, -w/2, -h/2, w, h);
@@ -446,9 +467,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const fontSize = txt.size * (canvas.width / 800); 
           
           ctx.translate(x, y);
+          if (txt.rotation) ctx.rotate(txt.rotation * Math.PI / 180);
           if (txt.flipH) ctx.scale(-1, 1);
           if (txt.flipV) ctx.scale(1, -1);
-          
+
           ctx.fillStyle = txt.color;
           ctx.font = `bold ${fontSize}px sans-serif`;
           ctx.textAlign = "center";

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "InfinityVCam",
-  "version": "1.0.3",
-  "description": "The real professional virtual camera for Google Meet. Add logos, text, overlays, and custom branding to your video calls.",
+  "name": "Nori V Cam",
+  "version": "1.1.0",
+  "description": "By Omnori — a professional virtual camera for Google Meet, Zoom & Teams. Add logos, text, overlays, and custom branding to your video calls.",
   "permissions": [
     "storage",
     "unlimitedStorage"
