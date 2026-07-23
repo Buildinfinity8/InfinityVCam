@@ -104,14 +104,17 @@
           ctx.fillText("No Signal", 640, 360);
           ctx.restore();
           drawOverlays(ctx, 1280, 720);
-          requestAnimationFrame(draw);
       }
       draw();
+      // setInterval, not requestAnimationFrame: rAF is fully suspended once
+      // the tab is hidden/backgrounded, which froze the outgoing frame the
+      // moment a user switched away from the call tab.
+      const timerId = setInterval(draw, 1000 / 30);
 
       const stream = canvas.captureStream(30);
       const track = stream.getVideoTracks()[0];
       const origStop = track.stop.bind(track);
-      track.stop = () => { active = false; canvas.remove(); origStop(); };
+      track.stop = () => { active = false; clearInterval(timerId); canvas.remove(); origStop(); };
       
       Object.defineProperty(track, 'label', { get: () => VIRTUAL_DEVICE_LABEL });
       Object.defineProperty(track, 'deviceId', { get: () => VIRTUAL_DEVICE_ID });
@@ -168,14 +171,17 @@
           ctx.restore();
 
           drawOverlays(ctx, width, height);
-          requestAnimationFrame(draw);
       }
       draw();
+      // setInterval, not requestAnimationFrame: rAF is fully suspended once
+      // the tab is hidden/backgrounded, which froze the outgoing frame the
+      // moment a user switched away from the call tab.
+      const timerId = setInterval(draw, 1000 / 30);
 
       const processedStream = canvas.captureStream(30);
       const processedTrack = processedStream.getVideoTracks()[0];
 
-      function cleanup() { active = false; video.srcObject = null; video.remove(); canvas.remove(); }
+      function cleanup() { active = false; clearInterval(timerId); video.srcObject = null; video.remove(); canvas.remove(); }
 
       const originalStop = processedTrack.stop.bind(processedTrack);
       processedTrack.stop = () => { videoTrack.stop(); cleanup(); originalStop(); };

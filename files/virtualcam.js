@@ -388,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function drawPreview() {
       if (!isSynthetic && (maincam.paused || maincam.ended)) {
-          requestAnimationFrame(drawPreview);
+          setTimeout(drawPreview, 1000 / 30);
           return;
       }
 
@@ -494,8 +494,11 @@ document.addEventListener("DOMContentLoaded", () => {
           ctx.fillText(txt.content, 0, 0);
           ctx.restore();
       });
-      
-      requestAnimationFrame(drawPreview);
+
+      // setTimeout, not requestAnimationFrame: rAF is fully suspended once
+      // the popup/popout window is hidden or loses focus, which froze the
+      // preview when switching tabs.
+      setTimeout(drawPreview, 1000 / 30);
   }
 
   loadConfig();
