@@ -25,8 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const newImageInput = document.getElementById("newImageFile");
   const imageList = document.getElementById("imageList");
 
-  canvas.width = 1800;
-  canvas.height = 1275;
+  canvas.width = 1280;
+  canvas.height = 720;
   let isSynthetic = false;
   
   // State
@@ -391,7 +391,20 @@ document.addEventListener("DOMContentLoaded", () => {
           requestAnimationFrame(drawPreview);
           return;
       }
-      
+
+      // Keep the canvas resolution matched to the real feed's native size
+      // (or a stable 16:9 default) so drawImage never has to stretch the
+      // frame into a mismatched aspect ratio.
+      if (isSynthetic) {
+          if (canvas.width !== 1280 || canvas.height !== 720) {
+              canvas.width = 1280;
+              canvas.height = 720;
+          }
+      } else if (maincam.videoWidth && (canvas.width !== maincam.videoWidth || canvas.height !== maincam.videoHeight)) {
+          canvas.width = maincam.videoWidth;
+          canvas.height = maincam.videoHeight;
+      }
+
       // 1. Background
       // Use #000 for active video to match inject.js
       ctx.fillStyle = isSynthetic ? "#2d3436" : "#000000";
