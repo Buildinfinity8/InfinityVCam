@@ -11,6 +11,14 @@ chrome.runtime.onInstalled.addListener(() => {
                   rotation: 0,
                   flipH: false,
                   flipV: false,
+                  brightness: 100,
+                  contrast: 100,
+                  saturation: 100,
+                  grayscale: 0,
+                  sepia: 0,
+                  hueRotate: 0,
+                  filterPreset: "normal",
+                  autoEnhance: false,
                   texts: [],
                   images: []
               }

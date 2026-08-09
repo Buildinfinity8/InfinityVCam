@@ -10,10 +10,45 @@
 
   let state = {
       scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false,
+      brightness: 100, contrast: 100, saturation: 100, autoEnhance: false,
+      grayscale: 0, sepia: 0, hueRotate: 0,
       texts: [], images: []
   };
-  
+
   const loadedImages = {};
+
+  // Auto Fix Colors: periodically sample the live frame and derive
+  // brightness/contrast that normalize it, instead of a fixed preset.
+  let autoAnalysisCanvas, autoAnalysisCtx;
+  function computeAutoLevels(source, srcWidth) {
+      if (!srcWidth) return null;
+      if (!autoAnalysisCanvas) {
+          autoAnalysisCanvas = document.createElement('canvas');
+          autoAnalysisCanvas.width = 48;
+          autoAnalysisCanvas.height = 27;
+          autoAnalysisCtx = autoAnalysisCanvas.getContext('2d', { willReadFrequently: true });
+      }
+      autoAnalysisCtx.drawImage(source, 0, 0, 48, 27);
+      let data;
+      try {
+          data = autoAnalysisCtx.getImageData(0, 0, 48, 27).data;
+      } catch (e) {
+          return null;
+      }
+      let sum = 0, min = 255, max = 0;
+      for (let i = 0; i < data.length; i += 4) {
+          const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          sum += lum;
+          if (lum < min) min = lum;
+          if (lum > max) max = lum;
+      }
+      const avg = sum / (data.length / 4);
+      const range = Math.max(max - min, 1);
+      return {
+          brightness: Math.min(160, Math.max(70, (128 / avg) * 100)),
+          contrast: Math.min(150, Math.max(80, (170 / range) * 100))
+      };
+  }
 
   window.addEventListener("message", (event) => {
       if (event.source !== window) return;
@@ -122,10 +157,118 @@
       return stream;
   }
 
-  async function processStream(stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (!videoTrack) return createSyntheticStream();
+  // Shared per-frame render: rotate/flip/filter/pan-scale the source into
+  // the canvas, then draw overlays on top. `source` is either a <video>
+  // element or a raw VideoFrame — both work with ctx.drawImage. autoState
+  // is a small mutable {frameCount, levels} bag owned by the caller.
+  function drawFrameToCanvas(ctx, source, srcWidth, width, height, autoState) {
+      // Match #000 background for video
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, width, height);
+      ctx.save();
 
+      if (state.rotation) {
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate(state.rotation * Math.PI / 180);
+          ctx.translate(-width / 2, -height / 2);
+      }
+      if (state.flipH) { ctx.translate(width, 0); ctx.scale(-1, 1); }
+      if (state.flipV) { ctx.translate(0, height); ctx.scale(1, -1); }
+
+      if (state.autoEnhance) {
+          autoState.frameCount++;
+          if (autoState.frameCount % 15 === 0) {
+              const levels = computeAutoLevels(source, srcWidth);
+              if (levels) autoState.levels = levels;
+          }
+      }
+      const brightness = state.autoEnhance ? autoState.levels.brightness : (state.brightness || 100);
+      const contrast = state.autoEnhance ? autoState.levels.contrast : (state.contrast || 100);
+      const saturation = state.saturation || 100;
+      ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${state.grayscale || 0}%) sepia(${state.sepia || 0}%) hue-rotate(${state.hueRotate || 0}deg)`;
+
+      const sw = width * state.scale; const sh = height * state.scale;
+      const x = (width/2) - (sw/2) + parseFloat(state.panX);
+      const y = (height/2) - (sh/2) + parseFloat(state.panY);
+
+      ctx.drawImage(source, x, y, sw, sh);
+      ctx.restore();
+
+      drawOverlays(ctx, width, height);
+  }
+
+  function finishProcessedTrack(processedStream, videoTrack, cleanup, width, height) {
+      const processedTrack = processedStream.getVideoTracks()[0];
+
+      const originalStop = processedTrack.stop.bind(processedTrack);
+      processedTrack.stop = () => { videoTrack.stop(); cleanup(); originalStop(); };
+
+      Object.defineProperty(processedTrack, 'label', { get: () => VIRTUAL_DEVICE_LABEL });
+      Object.defineProperty(processedTrack, 'deviceId', { get: () => VIRTUAL_DEVICE_ID });
+
+      processedTrack.getSettings = () => ({
+          ...videoTrack.getSettings(),
+          width, height,
+          deviceId: VIRTUAL_DEVICE_ID,
+          groupId: VIRTUAL_GROUP_ID
+      });
+
+      return processedTrack;
+  }
+
+  // Reads raw VideoFrames straight off the track via Insertable Streams,
+  // instead of through a hidden <video> element. Chrome throttles decode of
+  // <video> elements once the tab is backgrounded (switching tabs during a
+  // call): our draw loop kept running, but it kept re-painting the same
+  // stale frame because the <video> itself had stopped updating. Frames
+  // read this way aren't subject to that page-visibility throttling.
+  async function processStreamViaTrackProcessor(stream, videoTrack) {
+      const settings = videoTrack.getSettings();
+      const width = settings.width || 1280;
+      const height = settings.height || 720;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      hiddenContainer.appendChild(canvas);
+
+      const processor = new MediaStreamTrackProcessor({ track: videoTrack });
+      const reader = processor.readable.getReader();
+
+      let active = true;
+      const autoState = { frameCount: 0, levels: { brightness: 100, contrast: 100 } };
+
+      const processedStream = canvas.captureStream(30);
+
+      function cleanup() { active = false; reader.cancel().catch(() => {}); canvas.remove(); }
+
+      const processedTrack = finishProcessedTrack(processedStream, videoTrack, cleanup, width, height);
+
+      (async function pump() {
+          while (active) {
+              let result;
+              try {
+                  result = await reader.read();
+              } catch (e) {
+                  break;
+              }
+              if (result.done) break;
+              const frame = result.value;
+              if (active) drawFrameToCanvas(ctx, frame, frame.displayWidth, width, height, autoState);
+              frame.close();
+          }
+          // The reader ended on its own (source track died — unplugged,
+          // permission revoked) rather than via processedTrack.stop().
+          // Without this, the outgoing track never signals 'ended' and the
+          // call app just freezes on the last frame instead of noticing.
+          if (active) processedTrack.stop();
+      })();
+
+      stream.getAudioTracks().forEach(t => processedStream.addTrack(t));
+      return processedStream;
+  }
+
+  // Fallback for browsers without MediaStreamTrackProcessor support.
+  async function processStreamViaVideoElement(stream, videoTrack) {
       const video = document.createElement('video');
       video.muted = true; video.autoplay = true; video.playsInline = true;
       video.srcObject = stream;
@@ -147,57 +290,41 @@
       hiddenContainer.appendChild(canvas);
 
       let active = true;
+      let timerId;
+      const autoState = { frameCount: 0, levels: { brightness: 100, contrast: 100 } };
+
+      const processedStream = canvas.captureStream(30);
+
+      function cleanup() { active = false; clearInterval(timerId); video.srcObject = null; video.remove(); canvas.remove(); }
+
+      const processedTrack = finishProcessedTrack(processedStream, videoTrack, cleanup, width, height);
+
       function draw() {
           if (!active) return;
-          if (videoTrack.readyState === 'ended') { cleanup(); return; }
-          
-          // Match #000 background for video
-          ctx.fillStyle = "#000"; ctx.fillRect(0, 0, width, height);
-          ctx.save();
-
-          if (state.rotation) {
-              ctx.translate(width / 2, height / 2);
-              ctx.rotate(state.rotation * Math.PI / 180);
-              ctx.translate(-width / 2, -height / 2);
-          }
-          if (state.flipH) { ctx.translate(width, 0); ctx.scale(-1, 1); }
-          if (state.flipV) { ctx.translate(0, height); ctx.scale(1, -1); }
-          
-          const sw = width * state.scale; const sh = height * state.scale;
-          const x = (width/2) - (sw/2) + parseFloat(state.panX);
-          const y = (height/2) - (sh/2) + parseFloat(state.panY);
-          
-          ctx.drawImage(video, x, y, sw, sh);
-          ctx.restore();
-
-          drawOverlays(ctx, width, height);
+          // Source track died (unplugged, permission revoked) — stop the
+          // outgoing track too, so the call app sees it end instead of
+          // freezing on the last frame forever.
+          if (videoTrack.readyState === 'ended') { processedTrack.stop(); return; }
+          drawFrameToCanvas(ctx, video, video.videoWidth, width, height, autoState);
       }
       draw();
       // setInterval, not requestAnimationFrame: rAF is fully suspended once
       // the tab is hidden/backgrounded, which froze the outgoing frame the
       // moment a user switched away from the call tab.
-      const timerId = setInterval(draw, 1000 / 30);
-
-      const processedStream = canvas.captureStream(30);
-      const processedTrack = processedStream.getVideoTracks()[0];
-
-      function cleanup() { active = false; clearInterval(timerId); video.srcObject = null; video.remove(); canvas.remove(); }
-
-      const originalStop = processedTrack.stop.bind(processedTrack);
-      processedTrack.stop = () => { videoTrack.stop(); cleanup(); originalStop(); };
-
-      Object.defineProperty(processedTrack, 'label', { get: () => VIRTUAL_DEVICE_LABEL });
-      Object.defineProperty(processedTrack, 'deviceId', { get: () => VIRTUAL_DEVICE_ID });
-      
-      processedTrack.getSettings = () => ({
-          ...videoTrack.getSettings(),
-          width, height,
-          deviceId: VIRTUAL_DEVICE_ID,
-          groupId: VIRTUAL_GROUP_ID
-      });
+      timerId = setInterval(draw, 1000 / 30);
 
       stream.getAudioTracks().forEach(t => processedStream.addTrack(t));
       return processedStream;
+  }
+
+  async function processStream(stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) return createSyntheticStream();
+
+      if (typeof MediaStreamTrackProcessor !== 'undefined') {
+          return processStreamViaTrackProcessor(stream, videoTrack);
+      }
+      return processStreamViaVideoElement(stream, videoTrack);
   }
 
   if (navigator.mediaDevices) {
@@ -213,17 +340,27 @@
           return [...devices, virtualDevice];
       };
 
+      // deviceId constraints aren't always a bare string or {exact:id} —
+      // apps also send {ideal:id}, or wrap either in an array per the
+      // ConstrainDOMString spec. Missing those meant sites using those forms
+      // fell through to the real camera, unprocessed, even after the user
+      // explicitly picked "Nori V Cam".
+      function matchesVirtualDevice(dId) {
+          if (!dId) return false;
+          if (typeof dId === 'string') return dId === VIRTUAL_DEVICE_ID;
+          if (Array.isArray(dId)) return dId.includes(VIRTUAL_DEVICE_ID);
+          if (typeof dId === 'object') {
+              return matchesVirtualDevice(dId.exact) || matchesVirtualDevice(dId.ideal);
+          }
+          return false;
+      }
+
       const origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
       navigator.mediaDevices.getUserMedia = async function(constraints) {
           if (!constraints || !constraints.video) return origGUM(constraints);
 
-          let requestedVirtual = false;
-          if (typeof constraints.video === 'object') {
-              const dId = constraints.video.deviceId;
-              if (dId === VIRTUAL_DEVICE_ID || (dId && dId.exact === VIRTUAL_DEVICE_ID)) {
-                  requestedVirtual = true;
-              }
-          }
+          const requestedVirtual = typeof constraints.video === 'object' &&
+              matchesVirtualDevice(constraints.video.deviceId);
 
           if (requestedVirtual) {
               const realConstraints = { 

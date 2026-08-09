@@ -9,13 +9,31 @@ document.getElementById("themeToggle").addEventListener("click", function () {
   localStorage.setItem("nori-theme", next);
 });
 
+// Rate-us banner: dismissing it (X or clicking through) snoozes it for a
+// week, rather than hiding it for good.
+(function () {
+  const banner = document.getElementById("rateBanner");
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const dismissedAt = parseInt(localStorage.getItem("nori-rate-dismissed"), 10);
+  if (dismissedAt && Date.now() - dismissedAt < WEEK_MS) {
+    banner.classList.add("hidden");
+    return;
+  }
+  function dismiss() {
+    banner.classList.add("hidden");
+    localStorage.setItem("nori-rate-dismissed", Date.now());
+  }
+  document.getElementById("rateBannerClose").addEventListener("click", dismiss);
+  document.getElementById("rateBannerLink").addEventListener("click", dismiss);
+})();
+
 document.getElementById("share").addEventListener("click", function () {
   notif("success", "Link copied to clipboard!");
 });
 
 document.getElementById("popout").addEventListener("click", function () {
   chrome.windows.create({
-    url: chrome.runtime.getURL("popup.html"),
+    url: chrome.runtime.getURL("popup.html?standalone=1"),
     type: "popup",
     width: 482,
     height: 700

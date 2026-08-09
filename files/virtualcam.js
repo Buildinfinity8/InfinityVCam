@@ -1,8 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Chrome closes the action popup the instant its native file-picker
+  // dialog steals focus, killing the file input's change event before it
+  // fires. A window opened via chrome.windows.create isn't a transient
+  // popup bubble, so it survives the dialog — reuse it for file selection.
+  const urlParams = new URLSearchParams(location.search);
+  const isStandalone = urlParams.has("standalone");
+
   const maincam = document.getElementById("maincam");
   const canvas = document.getElementById("maincanwas");
   const ctx = canvas.getContext("2d");
   const cameraSelect = document.querySelector(".cselement");
+  const cpermitionEl = document.getElementById("cpermition");
 
   // Tabs
   const tabs = document.querySelectorAll(".radioitem");
@@ -15,15 +23,91 @@ document.addEventListener("DOMContentLoaded", () => {
   const rotateInput = document.getElementById("rotaterange");
   const flipVInput = document.getElementById("flipvertical");
   const flipHInput = document.getElementById("fliphorizontal");
-  
+  const resetCanvasBtn = document.getElementById("resetCanvasBtn");
+
+  const CANVAS_DEFAULTS = { scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false };
+  resetCanvasBtn.addEventListener("click", () => {
+      scaleInput.value = CANVAS_DEFAULTS.scale;
+      panXInput.value = CANVAS_DEFAULTS.panX;
+      panYInput.value = CANVAS_DEFAULTS.panY;
+      rotateInput.value = CANVAS_DEFAULTS.rotation;
+      flipHInput.checked = CANVAS_DEFAULTS.flipH;
+      flipVInput.checked = CANVAS_DEFAULTS.flipV;
+      saveConfig();
+  });
+
+  // Controls (Filters)
+  const brightnessInput = document.getElementById("brightnessrange");
+  const contrastInput = document.getElementById("contrastrange");
+  const saturationInput = document.getElementById("saturationrange");
+  const autoEnhanceInput = document.getElementById("autoEnhance");
+  const filterSwatches = document.querySelectorAll(".filter-swatch");
+
+  // One-click color-fix presets. brightness/contrast/saturation feed the
+  // existing sliders; grayscale/sepia/hueRotate are extra ctx.filter
+  // components with no dedicated slider (kept simple/"basic" on purpose).
+  const FILTER_PRESETS = {
+      normal:  { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, sepia: 0, hueRotate: 0 },
+      fixtint: { brightness: 108, contrast: 108, saturation: 110, grayscale: 0, sepia: 0, hueRotate: -6 },
+      warm:    { brightness: 103, contrast: 102, saturation: 115, grayscale: 0, sepia: 18, hueRotate: -4 },
+      cool:    { brightness: 100, contrast: 104, saturation: 105, grayscale: 0, sepia: 0, hueRotate: 10 },
+      bw:      { brightness: 105, contrast: 115, saturation: 100, grayscale: 100, sepia: 0, hueRotate: 0 },
+      vivid:   { brightness: 105, contrast: 118, saturation: 145, grayscale: 0, sepia: 0, hueRotate: 0 }
+  };
+  let grayscaleValue = 0, sepiaValue = 0, hueRotateValue = 0;
+  let currentPresetName = "normal";
+
+  function setActiveSwatch(name) {
+      filterSwatches.forEach(btn => btn.classList.toggle("active", btn.dataset.preset === name));
+  }
+
+  function applyPreset(name) {
+      const preset = FILTER_PRESETS[name];
+      if (!preset) return;
+      brightnessInput.value = preset.brightness;
+      contrastInput.value = preset.contrast;
+      saturationInput.value = preset.saturation;
+      grayscaleValue = preset.grayscale;
+      sepiaValue = preset.sepia;
+      hueRotateValue = preset.hueRotate;
+      currentPresetName = name;
+      autoEnhanceInput.checked = false;
+      updateAutoEnhanceUI();
+      setActiveSwatch(name);
+      saveConfig();
+  }
+
+  filterSwatches.forEach(btn => {
+      btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+  });
+
+  const resetFiltersBtn = document.getElementById("resetFiltersBtn");
+  resetFiltersBtn.addEventListener("click", () => applyPreset("normal"));
+
   // Controls (Text)
   const addTextBtn = document.getElementById("addTextBtn");
   const newTextInput = document.getElementById("newTextContent");
   const textList = document.getElementById("textList");
+  const clearTextBtn = document.getElementById("clearTextBtn");
+
+  clearTextBtn.addEventListener("click", () => {
+      if (overlays.texts.length === 0) return;
+      overlays.texts = [];
+      saveConfig();
+      renderTextList();
+  });
 
   // Controls (Image)
   const newImageInput = document.getElementById("newImageFile");
   const imageList = document.getElementById("imageList");
+  const clearImageBtn = document.getElementById("clearImageBtn");
+
+  clearImageBtn.addEventListener("click", () => {
+      if (overlays.images.length === 0) return;
+      overlays.images = [];
+      saveConfig();
+      renderImageList();
+  });
 
   canvas.width = 1280;
   canvas.height = 720;
@@ -35,6 +119,42 @@ document.addEventListener("DOMContentLoaded", () => {
       images: []
   };
   const loadedImages = {}; // Cache for preview
+
+  // Auto Fix Colors: periodically sample the live frame and derive
+  // brightness/contrast that normalize it, instead of a fixed preset.
+  let autoLevels = { brightness: 100, contrast: 100 };
+  let autoLevelsFrame = 0;
+  let autoAnalysisCanvas, autoAnalysisCtx;
+
+  function computeAutoLevels(videoEl) {
+      if (!videoEl.videoWidth) return null;
+      if (!autoAnalysisCanvas) {
+          autoAnalysisCanvas = document.createElement('canvas');
+          autoAnalysisCanvas.width = 48;
+          autoAnalysisCanvas.height = 27;
+          autoAnalysisCtx = autoAnalysisCanvas.getContext('2d', { willReadFrequently: true });
+      }
+      autoAnalysisCtx.drawImage(videoEl, 0, 0, 48, 27);
+      let data;
+      try {
+          data = autoAnalysisCtx.getImageData(0, 0, 48, 27).data;
+      } catch (e) {
+          return null;
+      }
+      let sum = 0, min = 255, max = 0;
+      for (let i = 0; i < data.length; i += 4) {
+          const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          sum += lum;
+          if (lum < min) min = lum;
+          if (lum > max) max = lum;
+      }
+      const avg = sum / (data.length / 4);
+      const range = Math.max(max - min, 1);
+      return {
+          brightness: Math.min(160, Math.max(70, (128 / avg) * 100)),
+          contrast: Math.min(150, Math.max(80, (170 / range) * 100))
+      };
+  }
 
   // --- Tab Logic ---
   tabs.forEach(tab => {
@@ -96,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Configuration Management ---
   function loadConfig() {
       chrome.storage.local.get(['config'], (result) => {
-          const config = result.config || { scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false, texts: [], images: [] };
+          const config = result.config || { scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false, brightness: 100, contrast: 100, saturation: 100, autoEnhance: false, texts: [], images: [] };
 
           // Basic
           scaleInput.value = config.scale;
@@ -105,15 +225,33 @@ document.addEventListener("DOMContentLoaded", () => {
           rotateInput.value = config.rotation || 0;
           flipHInput.checked = config.flipH;
           flipVInput.checked = config.flipV;
-          
+
+          // Filters
+          brightnessInput.value = config.brightness ?? 100;
+          contrastInput.value = config.contrast ?? 100;
+          saturationInput.value = config.saturation ?? 100;
+          grayscaleValue = config.grayscale || 0;
+          sepiaValue = config.sepia || 0;
+          hueRotateValue = config.hueRotate || 0;
+          currentPresetName = config.filterPreset || "normal";
+          setActiveSwatch(currentPresetName);
+          autoEnhanceInput.checked = !!config.autoEnhance;
+          updateAutoEnhanceUI();
+
           // Overlays
           overlays.texts = config.texts || [];
           overlays.images = config.images || [];
-          
+
           renderTextList();
           renderImageList();
           updateLabels();
       });
+  }
+
+  function updateAutoEnhanceUI() {
+      const auto = autoEnhanceInput.checked;
+      brightnessInput.disabled = auto;
+      contrastInput.disabled = auto;
   }
 
   function saveConfig() {
@@ -124,6 +262,14 @@ document.addEventListener("DOMContentLoaded", () => {
           rotation: parseFloat(rotateInput.value),
           flipH: flipHInput.checked,
           flipV: flipVInput.checked,
+          brightness: parseFloat(brightnessInput.value),
+          contrast: parseFloat(contrastInput.value),
+          saturation: parseFloat(saturationInput.value),
+          grayscale: grayscaleValue,
+          sepia: sepiaValue,
+          hueRotate: hueRotateValue,
+          filterPreset: currentPresetName,
+          autoEnhance: autoEnhanceInput.checked,
           texts: overlays.texts,
           images: overlays.images
       };
@@ -136,11 +282,38 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("leftrighttext").innerText = panXInput.value;
       document.getElementById("updowntext").innerText = panYInput.value;
       document.getElementById("rotatetext").innerText = rotateInput.value + "°";
+
+      if (autoEnhanceInput.checked) {
+          document.getElementById("brightnesstext").innerText = Math.round(autoLevels.brightness) + "% (auto)";
+          document.getElementById("contrasttext").innerText = Math.round(autoLevels.contrast) + "% (auto)";
+      } else {
+          document.getElementById("brightnesstext").innerText = brightnessInput.value + "%";
+          document.getElementById("contrasttext").innerText = contrastInput.value + "%";
+      }
+      document.getElementById("saturationtext").innerText = saturationInput.value + "%";
   }
 
   // --- Listeners (Basic) ---
   [scaleInput, panXInput, panYInput, rotateInput, flipVInput, flipHInput].forEach(el => {
       el.addEventListener('input', saveConfig);
+  });
+
+  // Manually tweaking a filter slider no longer matches any single preset.
+  [brightnessInput, contrastInput, saturationInput].forEach(el => {
+      el.addEventListener('input', () => {
+          currentPresetName = "custom";
+          setActiveSwatch(null);
+          saveConfig();
+      });
+  });
+
+  autoEnhanceInput.addEventListener('change', () => {
+      updateAutoEnhanceUI();
+      if (autoEnhanceInput.checked) {
+          currentPresetName = "custom";
+          setActiveSwatch(null);
+      }
+      saveConfig();
   });
 
   cameraSelect.addEventListener('change', () => {
@@ -171,6 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function renderTextList() {
+      clearTextBtn.disabled = overlays.texts.length === 0;
       textList.innerHTML = "";
       overlays.texts.forEach((item, index) => {
           const div = document.createElement("div");
@@ -249,6 +423,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // --- Image Overlay Logic ---
+  const imageUploadLabel = newImageInput.closest(".file-upload-btn");
+  if (imageUploadLabel && !isStandalone) {
+      imageUploadLabel.addEventListener("click", (e) => {
+          e.preventDefault();
+          chrome.windows.create({
+              url: chrome.runtime.getURL("popup.html?standalone=1&openImage=1"),
+              type: "popup",
+              width: 482,
+              height: 700
+          });
+          window.close();
+      });
+  }
+
   newImageInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -287,6 +475,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function renderImageList() {
+      clearImageBtn.disabled = overlays.images.length === 0;
       imageList.innerHTML = "";
       overlays.images.forEach((item, index) => {
           const div = document.createElement("div");
@@ -361,16 +550,19 @@ document.addEventListener("DOMContentLoaded", () => {
     isSynthetic = false;
 
     if (!cameraSelect.value) {
+        // User deliberately chose "No Camera (Virtual Only)" — not an error,
+        // so no permission prompt.
         isSynthetic = true;
+        cpermitionEl.style.display = "none";
         drawPreview();
         return;
     }
 
     const constraints = {
-        video: { 
+        video: {
             deviceId: { exact: cameraSelect.value },
-            width: { ideal: 1600 }, 
-            height: { ideal: 900 } 
+            width: { ideal: 1600 },
+            height: { ideal: 900 }
         }
     };
 
@@ -378,10 +570,15 @@ document.addEventListener("DOMContentLoaded", () => {
       previewStream = await navigator.mediaDevices.getUserMedia(constraints);
       maincam.srcObject = previewStream;
       maincam.play();
+      cpermitionEl.style.display = "none";
       drawPreview();
     } catch (error) {
       console.warn("Camera failed, using synthetic", error);
       isSynthetic = true;
+      // Only shown when a camera was actually picked but access failed
+      // (permission denied/revoked, device error) — re-shown here in case
+      // it had been hidden by an earlier successful preview.
+      cpermitionEl.style.display = "";
       drawPreview();
     }
   }
@@ -419,7 +616,6 @@ document.addEventListener("DOMContentLoaded", () => {
           ctx.textBaseline = "middle";
           ctx.fillText("No Signal", canvas.width/2, canvas.height/2);
       } else {
-        document.querySelector("#cpermition").style.display="none";
           const camRotation = parseFloat(rotateInput.value) || 0;
           if (camRotation) {
               ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -435,18 +631,31 @@ document.addEventListener("DOMContentLoaded", () => {
               ctx.scale(1, -1);
           }
 
+          const useAuto = autoEnhanceInput.checked;
+          if (useAuto) {
+              autoLevelsFrame++;
+              if (autoLevelsFrame % 15 === 0) {
+                  const levels = computeAutoLevels(maincam);
+                  if (levels) { autoLevels = levels; updateLabels(); }
+              }
+          }
+          const brightness = useAuto ? autoLevels.brightness : parseFloat(brightnessInput.value);
+          const contrast = useAuto ? autoLevels.contrast : parseFloat(contrastInput.value);
+          const saturation = parseFloat(saturationInput.value);
+          ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${grayscaleValue}%) sepia(${sepiaValue}%) hue-rotate(${hueRotateValue}deg)`;
+
           const vW = maincam.videoWidth;
-          const previewRatio = canvas.width / vW; 
+          const previewRatio = canvas.width / vW;
           const sw = canvas.width * parseFloat(scaleInput.value);
           const sh = canvas.height * parseFloat(scaleInput.value);
-          
+
           const x = (canvas.width/2) - (sw/2) + (parseFloat(panXInput.value) * previewRatio);
           const y = (canvas.height/2) - (sh/2) + (parseFloat(panYInput.value) * previewRatio);
-          
+
           ctx.drawImage(maincam, x, y, sw, sh);
       }
-      
-      if (!isSynthetic) ctx.restore(); // Restore flip context
+
+      ctx.restore(); // Restore flip/rotate/filter context (must always pair with the save() above)
 
       // 3. Render Overlays (Images)
       overlays.images.forEach(img => {
@@ -503,4 +712,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadConfig();
   getCameras();
+
+  if (isStandalone && urlParams.has("openImage")) {
+      document.querySelector('.radioitem[data-tab="image"]')?.click();
+  }
 });

@@ -9,6 +9,32 @@
 /* ---------------------------------- */
 /* Design Tokens / Theme              */
 /* ---------------------------------- */
+/* Dark is the app default — defined on bare :root (not just
+   [data-theme="dark"]) so styling never depends on the theme-detect
+   script in popup.html having run yet. That script sets the attribute
+   explicitly too, but the CSS no longer needs it to look right. */
+:root {
+    --bg: #16171f;
+    --surface: #1f2029;
+    --surface-alt: #262733;
+    --text: #f1f2f6;
+    --text-secondary: #a4a7b8;
+    --text-muted: #6b6e7d;
+    --border: #33343f;
+    --border-soft: #2b2c37;
+    --accent: #7c6cf0;
+    --accent-light: #a29bfe;
+    --accent-soft: #2b2650;
+    --accent-contrast: #ffffff;
+    --danger: #ff7675;
+    --danger-dark: #ff5252;
+    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.45);
+    --shadow-header: 0 4px 15px rgba(0, 0, 0, 0.4);
+    --preview-bg: #101116;
+    --preview-text: #7b7e8c;
+}
+
 :root[data-theme="light"] {
     --bg: #f8f9ff;
     --surface: #ffffff;
@@ -29,28 +55,6 @@
     --shadow-header: 0 4px 15px rgba(108, 92, 231, 0.3);
     --preview-bg: #2d3436;
     --preview-text: #636e72;
-}
-
-:root[data-theme="dark"] {
-    --bg: #16171f;
-    --surface: #1f2029;
-    --surface-alt: #262733;
-    --text: #f1f2f6;
-    --text-secondary: #a4a7b8;
-    --text-muted: #6b6e7d;
-    --border: #33343f;
-    --border-soft: #2b2c37;
-    --accent: #7c6cf0;
-    --accent-light: #a29bfe;
-    --accent-soft: #2b2650;
-    --accent-contrast: #ffffff;
-    --danger: #ff7675;
-    --danger-dark: #ff5252;
-    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
-    --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.45);
-    --shadow-header: 0 4px 15px rgba(0, 0, 0, 0.4);
-    --preview-bg: #101116;
-    --preview-text: #7b7e8c;
 }
 
 body {
@@ -160,8 +164,66 @@ body {
     height: 16px;
 }
 
+a.icon-btn {
+    text-decoration: none;
+}
+
 :root[data-theme="light"] .icon-btn .icon-moon { display: none; }
 :root[data-theme="dark"] .icon-btn .icon-sun { display: none; }
+
+/* Rate-us banner */
+.rate-banner {
+    margin: 0 10px 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-light);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rate-banner.hidden {
+    display: none;
+}
+
+.rate-banner-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: #f5a623;
+}
+
+.rate-banner-text {
+    flex-grow: 1;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+}
+
+.rate-banner-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rate-banner-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    flex-shrink: 0;
+}
+
+.rate-banner-close:hover {
+    color: var(--text);
+}
 
 /* Main Preview */
 .maincont {
@@ -246,6 +308,14 @@ body {
     filter: invert(1) brightness(1.3);
 }
 
+.radioitem svg {
+    width: 28px;
+    height: 28px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    transition: 0.2s;
+}
+
 .selectedradio {
     border-color: var(--accent);
     background-color: var(--accent-soft);
@@ -253,6 +323,12 @@ body {
 
 .selectedradio img {
     opacity: 1;
+    transform: scale(1.1);
+}
+
+.selectedradio svg {
+    opacity: 1;
+    color: var(--accent);
     transform: scale(1.1);
 }
 
@@ -306,11 +382,126 @@ input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.2);
 }
 
+input[type="range"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+    cursor: not-allowed;
+}
+
 .feature-row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 5px;
 }
+
+.tab-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
+.btn-reset,
+.btn-clear {
+    padding: 5px 10px;
+    background: transparent;
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-reset:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-clear:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn-reset:disabled,
+.btn-clear:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.filter-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin: -4px 0 14px;
+}
+
+.filters-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.filter-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.filter-swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.filter-swatch::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 2px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.15);
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    transition: transform 0.15s, outline-color 0.15s;
+}
+
+.filter-swatch span {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.filter-swatch:hover::before {
+    transform: scale(1.08);
+}
+
+.filter-swatch.active::before {
+    outline-color: var(--accent);
+}
+
+.filter-swatch.active span {
+    color: var(--accent);
+}
+
+.swatch-normal::before { background: linear-gradient(135deg, #cfd8dc, #90a4ae); }
+.swatch-fixtint::before { background: linear-gradient(135deg, #a5d6a7, #26a69a); }
+.swatch-warm::before { background: linear-gradient(135deg, #ffcc80, #ff7043); }
+.swatch-cool::before { background: linear-gradient(135deg, #90caf9, #5c6bc0); }
+.swatch-bw::before { background: linear-gradient(135deg, #eceff1, #546e7a); }
+.swatch-vivid::before { background: linear-gradient(135deg, #f06292, #7e57c2); }
 
 /* Checkboxes */
 label {
@@ -565,6 +756,19 @@ input[type="color"] {
     font-size: 11px;
     color: var(--text-muted);
     margin-top: 2px;
+}
+
+.footer-rate-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.footer-rate-link:hover {
+    color: var(--accent);
 }
 
 .socials {

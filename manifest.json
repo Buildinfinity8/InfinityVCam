@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nori V Cam",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "By Omnori — a professional virtual camera for Google Meet, Zoom & Teams. Add logos, text and custom branding to your video calls.",
   "permissions": [
     "storage",
