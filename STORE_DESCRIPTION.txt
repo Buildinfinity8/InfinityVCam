@@ -1,0 +1,59 @@
+================================================================================
+CHROME WEB STORE LISTING: NORI V CAM (INFINITYVCAM)
+================================================================================
+
+SHORT DESCRIPTION (Max 132 characters)
+--------------------------------------------------------------------------------
+Browser virtual camera for Google Meet & Zoom. Add logos, lower-thirds, screen ring lighting, and live webcam framing without OBS.
+
+
+DETAILED STORE DESCRIPTION
+--------------------------------------------------------------------------------
+Turn your regular webcam into a customizable virtual camera directly inside Google Chrome—no bulky desktop software, virtual audio drivers, or OBS configurations required.
+
+Whether you are jumping into client calls on Google Meet, hosting demos on Zoom Web, or running interviews on Microsoft Teams, Nori V Cam (InfinityVCam) sits right between your physical camera and the browser. It lets you correct bad webcam angles, brand your video feed, balance harsh lighting, and illuminate dark rooms with an edge-lit screen ring light.
+
+All processing runs 100% locally on your machine. Your camera feed never touches an external server.
+
+
+WHAT YOU CAN DO
+
+Framing & Transforms
+Webcam lenses are often too wide or mounted at awkward angles. 
+- Zoom from 0.2x up to 3.0x with smooth sub-pixel panning to frame your headshot properly.
+- Rotate your feed anywhere from -180° to +180° to fix crooked monitor mounts or sideways capture cards.
+- Mirror your camera horizontally or vertically with a single toggle.
+- Turn on the rule-of-thirds composition grid in your preview to check your eyeline before you unmute.
+
+Screen Ring Light
+Stuck in a dimly lit room or hopping on a late-night standup?
+- Turn your monitor into a soft, diffused ring light or solid border frame right from the browser.
+- Pick from studio-calibrated color temperatures—like 5600K Daylight, 5000K Warm Daylight, 3200K Tungsten, or Golden Amber—or dial in a custom hex code.
+- Intelligent cursor detection: the glow automatically fades when your mouse nears screen edges so you can still read tabs, click buttons, and navigate without blinding glare.
+
+Lighting & Color Correction
+Cheap sensors blow out highlights and crush shadows.
+- Auto Fix Lighting analyzes frame luminance every few frames to normalize underexposed and overexposed rooms automatically.
+- Fine-tune brightness, contrast, and saturation manually.
+- Choose from instant color grades (like Normal, Vivid, Warm, Cool, Noir, or Vintage) with live thumbnails rendered directly from your camera.
+
+Text & Brand Overlays
+- Drop multiple text layers for your name, job title, social handles, or meeting agendas.
+- Adjust font sizes, coordinates, drop shadows, and color presets.
+- Independent mirroring: flip your text layers separately so your name stays readable even when your webcam is mirrored.
+- Upload transparent PNGs, SVG badges, or company watermarks. Resize, position, and dial in opacity to fit your layout.
+
+
+BUILT FOR REAL CALL WORKFLOWS
+
+- Immune to Background Tab Freezing: Standard canvas virtual cameras freeze the second you click away from your call to take notes. We route frames through WebCodecs insertable streams (MediaStreamTrackProcessor), keeping your feed fluid even when your meeting tab is buried.
+- Safe Popout Window: Detach the extension into a dedicated floating window so your adjustments stay accessible without interrupting screen shares.
+- Privacy Mode: If your physical camera drops or disconnects, Nori V Cam emits a clean "No Signal" synthetic stream with your branding intact—never an unexpected black box or broken video crash.
+
+
+HOW TO USE IT
+
+1. Click the extension icon and select your physical camera from the top dropdown.
+2. Dial in your framing, drop on a title card or logo, and tweak your lighting.
+3. Open Google Meet, Zoom, or Teams, head into Video Settings, and select "Nori V Cam".
+4. Any tweak you make in the popup updates your live meeting feed instantly.
