@@ -23,26 +23,35 @@
     </div>
     <div class="actions">
       <button id="themeToggle" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round">
-          <circle cx="12" cy="12" r="4" />
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor">
           <path
-            d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+            d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z" />
         </svg>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5a.6.6 0 0 0-.7-.8A9.5 9.5 0 1 0 21.3 15.4a.6.6 0 0 0-.8-.7Z" />
+          <path
+            d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z" />
         </svg>
       </button>
       <div class="sharebtn">
-        <a id="share" title="Copy Link"><img src="files/images/share.png" alt="" height="14" /></a>
-        <a id="popout" title="Popout"><img src="files/images/popout.png" alt="" height="14" /></a>
+        <a id="share" title="Copy Link">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+          </svg>
+        </a>
+        <a id="popout" title="Popout">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+          </svg>
+        </a>
       </div>
     </div>
   </div>
 
   <div id="rateBanner" class="rate-banner">
     <svg class="rate-banner-icon" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.5l2.9 6.05 6.6.85-4.85 4.6 1.25 6.6L12 17.6l-5.9 3-1.25-6.6-4.85-4.6 6.6-.85Z" />
+      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z" />
     </svg>
     <span class="rate-banner-text">Enjoying Nori V Cam? Leave us a rating on the Chrome Web Store!</span>
     <a id="rateBannerLink" class="btn-primary rate-banner-btn"
@@ -59,20 +68,34 @@
   </div>
 
   <div class="navoptions">
-    <div class="radioitem selectedradio" data-tab="canvas">
-      <img src="files/images/canvas.png" alt="Canvas" height="30" />
+    <div class="radioitem selectedradio" data-tab="canvas" title="Canvas">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M5.54 8.46L2 12l3.54 3.54 1.76-1.77L5.54 12l1.76-1.77zm6.46 10l-1.77-1.76-1.77 1.76L12 22l3.54-3.54-1.77-1.76zm6.46-10l-1.76 1.77L18.46 12l-1.76 1.77 1.76 1.77L22 12zm-10-2.92l1.77 1.76L12 5.54l1.77 1.76 1.77-1.76L12 2z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
     </div>
-    <div class="radioitem" data-tab="text">
-      <img src="files/images/text.png" alt="Text" height="30" />
+    <div class="radioitem" data-tab="text" title="Text">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z" />
+      </svg>
     </div>
-    <div class="radioitem" data-tab="image">
-      <img src="files/images/image.png" alt="Image" height="30" />
+    <div class="radioitem" data-tab="image" title="Image">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z" />
+      </svg>
     </div>
-    <div class="radioitem" data-tab="filters">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="4" y1="6" x2="20" y2="6" /><circle cx="9" cy="6" r="2.2" fill="currentColor" stroke="none" />
-        <line x1="4" y1="12" x2="20" y2="12" /><circle cx="16" cy="12" r="2.2" fill="currentColor" stroke="none" />
-        <line x1="4" y1="18" x2="20" y2="18" /><circle cx="12" cy="18" r="2.2" fill="currentColor" stroke="none" />
+    <div class="radioitem" data-tab="filters" title="Filters">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+      </svg>
+    </div>
+    <div class="radioitem" data-tab="light" title="Ring Light">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M7 11H1v2h6v-2zm2.17-3.24L7.05 5.64 5.64 7.05l2.12 2.12 1.41-1.41zM13 1h-2v6h2V1zm5.36 6.05l-1.41-1.41-2.12 2.12 1.41 1.41 2.12-2.12zM17 11v2h6v-2h-6zm-5-2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm2.83 7.24l2.12 2.12 1.41-1.41-2.12-2.12-1.41 1.41zm-9.19.71l1.41 1.41 2.12-2.12-1.41-1.41-2.12 2.12zM11 23h2v-6h-2v6z" />
       </svg>
     </div>
   </div>
@@ -81,42 +104,86 @@
 
   <!-- Canvas Settings Tab -->
   <div id="tab-canvas" class="featurecont tab-content tab-active">
-    <div class="tab-actions">
-      <button type="button" id="resetCanvasBtn" class="btn-reset">Reset</button>
-    </div>
-    <div class="feature-row">
-      <span>Zoom Scale</span>
-      <span id="rangetext">1.2x</span>
-    </div>
-    <input id="scalerange" type="range" min="0.2" max="3" value="1.2" step="0.05" />
+    <div class="panel-card">
+      <div class="panel-card-header">
+        <span class="panel-card-title">Transform</span>
+        <button type="button" id="resetCanvasBtn" class="btn-reset">Reset</button>
+      </div>
 
-    <div class="feature-row">
-      <span>Horizontal Pan</span>
-      <span id="leftrighttext">0</span>
-    </div>
-    <input id="leftrightrange" type="range" min="-1000" max="1000" value="0" step="10" />
+      <div class="overlay-controls-grid">
+        <div class="overlay-field">
+          <div class="field-label-row">
+            <span class="field-label">Zoom</span>
+            <span class="field-val" id="rangetext">1.2x</span>
+          </div>
+          <input id="scalerange" type="range" min="0.2" max="3" value="1.2" step="0.05" />
+        </div>
+        <div class="overlay-field">
+          <div class="field-label-row">
+            <span class="field-label">Rotation</span>
+            <span class="field-val" id="rotatetext">0°</span>
+          </div>
+          <input id="rotaterange" type="range" min="-180" max="180" value="0" step="1" />
+        </div>
+        <div class="overlay-field">
+          <div class="field-label-row">
+            <span class="field-label">Pan X</span>
+            <span class="field-val" id="leftrighttext">0</span>
+          </div>
+          <input id="leftrightrange" type="range" min="-1000" max="1000" value="0" step="10" />
+        </div>
+        <div class="overlay-field">
+          <div class="field-label-row">
+            <span class="field-label">Pan Y</span>
+            <span class="field-val" id="updowntext">0</span>
+          </div>
+          <input id="updownrange" type="range" min="-1000" max="1000" value="0" step="10" />
+        </div>
+      </div>
 
-    <div class="feature-row">
-      <span>Vertical Pan</span>
-      <span id="updowntext">0</span>
+      <div class="overlay-flips-bar">
+        <div class="overlay-flip-toggle">
+          <label for="fliphorizontal" class="flip-toggle-label">Flip Horiz</label>
+          <div class="toggle-switch">
+            <input id="fliphorizontal" type="checkbox" />
+            <label for="fliphorizontal">Toggle</label>
+          </div>
+        </div>
+        <div class="overlay-flip-toggle">
+          <label for="flipvertical" class="flip-toggle-label">Flip Vert</label>
+          <div class="toggle-switch">
+            <input id="flipvertical" type="checkbox" />
+            <label for="flipvertical">Toggle</label>
+          </div>
+        </div>
+        <div class="overlay-flip-toggle">
+          <label for="gridToggle" class="flip-toggle-label">Grid</label>
+          <div class="toggle-switch">
+            <input id="gridToggle" type="checkbox" />
+            <label for="gridToggle">Toggle</label>
+          </div>
+        </div>
+      </div>
     </div>
-    <input id="updownrange" type="range" min="-1000" max="1000" value="0" step="10" />
 
-    <div class="feature-row">
-      <span>Rotation</span>
-      <span id="rotatetext">0°</span>
-    </div>
-    <input id="rotaterange" type="range" min="-180" max="180" value="0" step="1" />
-
-    <div class="checkbox-group">
-      <label>
-        <span>Flip V</span>
-        <input id="flipvertical" type="checkbox" />
-      </label>
-      <label>
-        <span>Flip H</span>
-        <input id="fliphorizontal" type="checkbox" />
-      </label>
+    <div class="panel-card disabled-panel" title="Under development">
+      <div class="panel-card-header" style="margin-bottom: 8px; padding-bottom: 8px;">
+        <span class="panel-card-title">
+          Background Blur
+          <span class="badge-dev">Under Dev</span>
+        </span>
+        <div class="toggle-switch">
+          <input id="backgroundBlur" type="checkbox" disabled />
+          <label for="backgroundBlur">Toggle</label>
+        </div>
+      </div>
+      <div class="overlay-field">
+        <div class="field-label-row">
+          <span class="field-label">Strength</span>
+          <span class="field-val" id="blurstrengthtext">50%</span>
+        </div>
+        <input id="blurstrengthrange" type="range" min="0" max="100" value="50" step="1" disabled />
+      </div>
     </div>
   </div>
 
@@ -134,58 +201,121 @@
 
   <!-- Image Overlays Tab -->
   <div id="tab-image" class="featurecont tab-content">
-    <div class="add-row">
-      <label class="file-upload-btn">
+    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+      <label class="file-upload-bar" style="flex: 1;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
         <span>Upload Image</span>
         <input type="file" id="newImageFile" accept="image/*">
       </label>
-    </div>
-    <div class="tab-actions">
-      <button type="button" id="clearImageBtn" class="btn-clear">Clear All</button>
+      <button type="button" id="clearImageBtn" class="btn-clear" style="margin: 0;">Clear All</button>
     </div>
     <div id="imageList" class="overlay-list"></div>
   </div>
 
   <!-- Filters Tab -->
   <div id="tab-filters" class="featurecont tab-content">
-    <div class="tab-actions">
-      <button type="button" id="resetFiltersBtn" class="btn-reset">Reset</button>
-    </div>
-    <span class="filters-label">Quick Filters</span>
-    <div class="filter-swatches">
-      <button type="button" class="filter-swatch swatch-normal active" data-preset="normal"><span>Normal</span></button>
-      <button type="button" class="filter-swatch swatch-fixtint" data-preset="fixtint"><span>Fix Tint</span></button>
-      <button type="button" class="filter-swatch swatch-warm" data-preset="warm"><span>Warm</span></button>
-      <button type="button" class="filter-swatch swatch-cool" data-preset="cool"><span>Cool</span></button>
-      <button type="button" class="filter-swatch swatch-bw" data-preset="bw"><span>B&amp;W</span></button>
-      <button type="button" class="filter-swatch swatch-vivid" data-preset="vivid"><span>Vivid</span></button>
-    </div>
+    <div class="panel-card">
+      <div class="panel-card-header">
+        <span class="panel-card-title">Color Adjustment</span>
+        <button type="button" id="resetFiltersBtn" class="btn-reset">Reset</button>
+      </div>
 
-    <div class="checkbox-group">
-      <label>
-        <span>Auto Fix Colors</span>
-        <input id="autoEnhance" type="checkbox" />
-      </label>
-    </div>
-    <p class="filter-hint">Samples your feed and automatically balances brightness &amp; contrast to your lighting.</p>
+      <div class="toggle-row-clean" style="margin-bottom: 12px;">
+        <label for="autoEnhance" class="flip-toggle-label" style="font-size: 12px; font-weight: 600;">Auto Fix Lighting</label>
+        <div class="toggle-switch">
+          <input id="autoEnhance" type="checkbox" />
+          <label for="autoEnhance">Toggle</label>
+        </div>
+      </div>
 
-    <div class="feature-row">
-      <span>Brightness</span>
-      <span id="brightnesstext">100%</span>
-    </div>
-    <input id="brightnessrange" type="range" min="50" max="150" value="100" step="1" />
+      <div class="overlay-controls-grid" style="margin-bottom: 10px;">
+        <div class="overlay-field">
+          <div class="field-label-row">
+            <span class="field-label">Brightness</span>
+            <span class="field-val" id="brightnesstext">100%</span>
+          </div>
+          <input id="brightnessrange" type="range" min="50" max="150" value="100" step="1" />
+        </div>
+        <div class="overlay-field">
+          <div class="field-label-row">
+            <span class="field-label">Contrast</span>
+            <span class="field-val" id="contrasttext">100%</span>
+          </div>
+          <input id="contrastrange" type="range" min="50" max="150" value="100" step="1" />
+        </div>
+      </div>
 
-    <div class="feature-row">
-      <span>Contrast</span>
-      <span id="contrasttext">100%</span>
+      <div class="overlay-field">
+        <div class="field-label-row">
+          <span class="field-label">Saturation</span>
+          <span class="field-val" id="saturationtext">100%</span>
+        </div>
+        <input id="saturationrange" type="range" min="0" max="200" value="100" step="1" />
+      </div>
     </div>
-    <input id="contrastrange" type="range" min="50" max="150" value="100" step="1" />
+  </div>
 
-    <div class="feature-row">
-      <span>Saturation</span>
-      <span id="saturationtext">100%</span>
+  <!-- Ring Light Tab -->
+  <div id="tab-light" class="featurecont tab-content">
+    <div class="panel-card">
+      <div class="panel-card-header">
+        <span class="panel-card-title">Ring Light</span>
+        <div class="toggle-switch">
+          <input id="ringLightToggle" type="checkbox" />
+          <label for="ringLightToggle">Toggle</label>
+        </div>
+      </div>
+
+      <!-- Glow Style -->
+      <div class="overlay-field" style="margin-bottom: 12px;">
+        <div class="field-label-row" style="margin-bottom: 6px;">
+          <span class="field-label">Style</span>
+        </div>
+        <div class="segmented" id="ringLightStyleGroup">
+          <button type="button" class="segmented-btn active" data-style="gradient">Diffused</button>
+          <button type="button" class="segmented-btn" data-style="solid">Solid</button>
+        </div>
+      </div>
+
+      <!-- Light Color -->
+      <div class="overlay-color-section">
+        <div class="field-label-row">
+          <span class="field-label">Color Temperature</span>
+          <div class="color-picker-control small" title="Custom color">
+            <span class="color-preview-pill" id="ringLightColorPill" style="background-color: #fff4e6;"></span>
+            <span class="color-hex-val" id="ringLightColorVal">#FFF4E6</span>
+            <input id="ringLightColor" type="color" value="#fff4e6" />
+          </div>
+        </div>
+        <div class="color-presets-row" id="ringLightPresets" style="margin-top: 6px; margin-bottom: 0;">
+          <button type="button" class="color-chip" data-color="#ffffff" style="background: #ffffff;" title="Studio Daylight (5600K)"></button>
+          <button type="button" class="color-chip active" data-color="#fff4e6" style="background: #fff4e6;" title="Warm Daylight (5000K)"></button>
+          <button type="button" class="color-chip" data-color="#fef3c7" style="background: #fef3c7;" title="Neutral Studio (4500K)"></button>
+          <button type="button" class="color-chip" data-color="#fed7aa" style="background: #fed7aa;" title="Soft Tungsten (3200K)"></button>
+          <button type="button" class="color-chip" data-color="#fb923c" style="background: #fb923c;" title="Golden Amber (2700K)"></button>
+          <button type="button" class="color-chip" data-color="#f87171" style="background: #f87171;" title="Warm Sunset Fill"></button>
+          <button type="button" class="color-chip" data-color="#cbd5e1" style="background: #cbd5e1;" title="Cool Slate Ambient"></button>
+          <button type="button" class="color-chip" data-color="#334155" style="background: #334155;" title="Deep Charcoal Dimmer"></button>
+        </div>
+      </div>
+
+      <!-- Intensity -->
+      <div class="overlay-field" style="margin-bottom: 12px;">
+        <div class="field-label-row">
+          <span class="field-label">Intensity</span>
+          <span class="field-val" id="ringlightintensitytext">50%</span>
+        </div>
+        <input id="ringLightIntensity" type="range" min="0" max="200" value="50" step="1" />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; padding-top: 8px; border-top: 1px solid var(--border-soft);">
+        <button type="button" id="resetRingLightBtn" class="btn-reset">Reset</button>
+      </div>
     </div>
-    <input id="saturationrange" type="range" min="0" max="200" value="100" step="1" />
   </div>
 
   <footer class="footer">
@@ -193,9 +323,9 @@
       <span class="footer-by">Built by</span>
       <a href="https://github.com/omnori" target="_blank" rel="noopener" class="footer-omnori">Omnori</a>
     </div>
-    <p class="footer-tagline">Building Products With No End.</p>
+    <p class="footer-tagline">Webcam controls for video calls and streams.</p>
     <a href="https://chromewebstore.google.com/detail/infinityvcam/kckmcaholkgphbbjcijcghjgciagndab" target="_blank"
-      rel="noopener" class="footer-rate-link">⭐ Rate Nori V Cam</a>
+      rel="noopener" class="footer-rate-link">⭐ Rate on Chrome Web Store</a>
     <div class="socials">
       <a href="https://www.instagram.com/omnori.tech" target="_blank" rel="noopener" title="Instagram"
         aria-label="Omnori on Instagram">
@@ -222,6 +352,7 @@
   </footer>
 </body>
 <script src="files/virtualcam.js"></script>
+<script src="files/scripts/bgblur.js"></script>
 <script src="files/script.js"></script>
 
 </html>

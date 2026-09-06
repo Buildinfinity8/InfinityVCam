@@ -26,12 +26,16 @@
   "background": {
     "service_worker": "files/scripts/background.js"
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "content_scripts": [
     {
       "matches": [
         "<all_urls>"
       ],
       "js": [
+        "files/scripts/bgblur.js",
         "files/scripts/inject.js"
       ],
       "world": "MAIN",
@@ -48,13 +52,25 @@
       "world": "ISOLATED",
       "run_at": "document_start",
       "all_frames": true
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "files/scripts/ringlight.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
-        "files/images/*.png",
-        "files/scripts/inject.js"
+        "files/images/*",
+        "files/scripts/inject.js",
+        "files/vendor/mediapipe/*"
       ],
       "matches": [
         "<all_urls>"

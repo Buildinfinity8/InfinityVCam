@@ -19,6 +19,12 @@ chrome.runtime.onInstalled.addListener(() => {
                   hueRotate: 0,
                   filterPreset: "normal",
                   autoEnhance: false,
+                  backgroundBlur: false,
+                  backgroundBlurStrength: 50,
+                  ringLight: false,
+                  ringLightColor: "#fff4e6",
+                  ringLightIntensity: 50,
+                  ringLightStyle: "gradient",
                   texts: [],
                   images: []
               }

@@ -12,6 +12,7 @@
       scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false,
       brightness: 100, contrast: 100, saturation: 100, autoEnhance: false,
       grayscale: 0, sepia: 0, hueRotate: 0,
+      backgroundBlur: false, backgroundBlurStrength: 50,
       texts: [], images: []
   };
 
@@ -89,6 +90,7 @@
                   // Apply flips relative to the item's center
                   if (img.flipH) ctx.scale(-1, 1);
                   if (img.flipV) ctx.scale(1, -1);
+                  ctx.globalAlpha = (img.opacity !== undefined ? img.opacity : 100) / 100;
 
                   ctx.drawImage(i, -w/2, -h/2, w, h);
                   ctx.restore();
@@ -158,21 +160,28 @@
   }
 
   // Shared per-frame render: rotate/flip/filter/pan-scale the source into
-  // the canvas, then draw overlays on top. `source` is either a <video>
-  // element or a raw VideoFrame — both work with ctx.drawImage. autoState
-  // is a small mutable {frameCount, levels} bag owned by the caller.
-  function drawFrameToCanvas(ctx, source, srcWidth, width, height, autoState) {
-      // Match #000 background for video
-      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, width, height);
-      ctx.save();
+  // an offscreen "sharp" canvas, optionally blur its background behind the
+  // person, then draw overlays on top of the final composited result.
+  // `source` is either a <video> element or a raw VideoFrame — both work
+  // with ctx.drawImage. autoState is a small mutable {frameCount, levels}
+  // bag owned by the caller. `sharp` is the {canvas, ctx} scratch pair
+  // owned by the caller (one per outgoing track, so concurrent streams
+  // don't share state); `nativeBlurApplied` means the OS/browser already
+  // blurred the source before it ever reached us, so the ML fallback below
+  // is skipped entirely.
+  function drawFrameToCanvas(ctx, source, srcWidth, width, height, autoState, sharp, nativeBlurApplied) {
+      const sharpCtx = sharp.ctx;
+      sharpCtx.fillStyle = "#000";
+      sharpCtx.fillRect(0, 0, width, height);
+      sharpCtx.save();
 
       if (state.rotation) {
-          ctx.translate(width / 2, height / 2);
-          ctx.rotate(state.rotation * Math.PI / 180);
-          ctx.translate(-width / 2, -height / 2);
+          sharpCtx.translate(width / 2, height / 2);
+          sharpCtx.rotate(state.rotation * Math.PI / 180);
+          sharpCtx.translate(-width / 2, -height / 2);
       }
-      if (state.flipH) { ctx.translate(width, 0); ctx.scale(-1, 1); }
-      if (state.flipV) { ctx.translate(0, height); ctx.scale(1, -1); }
+      if (state.flipH) { sharpCtx.translate(width, 0); sharpCtx.scale(-1, 1); }
+      if (state.flipV) { sharpCtx.translate(0, height); sharpCtx.scale(1, -1); }
 
       if (state.autoEnhance) {
           autoState.frameCount++;
@@ -184,14 +193,20 @@
       const brightness = state.autoEnhance ? autoState.levels.brightness : (state.brightness || 100);
       const contrast = state.autoEnhance ? autoState.levels.contrast : (state.contrast || 100);
       const saturation = state.saturation || 100;
-      ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${state.grayscale || 0}%) sepia(${state.sepia || 0}%) hue-rotate(${state.hueRotate || 0}deg)`;
+      sharpCtx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${state.grayscale || 0}%) sepia(${state.sepia || 0}%) hue-rotate(${state.hueRotate || 0}deg)`;
 
       const sw = width * state.scale; const sh = height * state.scale;
       const x = (width/2) - (sw/2) + parseFloat(state.panX);
       const y = (height/2) - (sh/2) + parseFloat(state.panY);
 
-      ctx.drawImage(source, x, y, sw, sh);
-      ctx.restore();
+      sharpCtx.drawImage(source, x, y, sw, sh);
+      sharpCtx.restore();
+
+      if (state.backgroundBlur && !nativeBlurApplied && window.NoriBgBlur) {
+          window.NoriBgBlur.composite(ctx, sharp.canvas, width, height, state.backgroundBlurStrength || 50, ctx);
+      } else {
+          ctx.drawImage(sharp.canvas, 0, 0, width, height);
+      }
 
       drawOverlays(ctx, width, height);
   }
@@ -221,7 +236,7 @@
   // call): our draw loop kept running, but it kept re-painting the same
   // stale frame because the <video> itself had stopped updating. Frames
   // read this way aren't subject to that page-visibility throttling.
-  async function processStreamViaTrackProcessor(stream, videoTrack) {
+  async function processStreamViaTrackProcessor(stream, videoTrack, nativeBlurApplied) {
       const settings = videoTrack.getSettings();
       const width = settings.width || 1280;
       const height = settings.height || 720;
@@ -230,6 +245,10 @@
       canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d', { alpha: false });
       hiddenContainer.appendChild(canvas);
+
+      const sharp = { canvas: document.createElement('canvas') };
+      sharp.canvas.width = width; sharp.canvas.height = height;
+      sharp.ctx = sharp.canvas.getContext('2d');
 
       const processor = new MediaStreamTrackProcessor({ track: videoTrack });
       const reader = processor.readable.getReader();
@@ -253,7 +272,7 @@
               }
               if (result.done) break;
               const frame = result.value;
-              if (active) drawFrameToCanvas(ctx, frame, frame.displayWidth, width, height, autoState);
+              if (active) drawFrameToCanvas(ctx, frame, frame.displayWidth, width, height, autoState, sharp, nativeBlurApplied);
               frame.close();
           }
           // The reader ended on its own (source track died — unplugged,
@@ -268,7 +287,7 @@
   }
 
   // Fallback for browsers without MediaStreamTrackProcessor support.
-  async function processStreamViaVideoElement(stream, videoTrack) {
+  async function processStreamViaVideoElement(stream, videoTrack, nativeBlurApplied) {
       const video = document.createElement('video');
       video.muted = true; video.autoplay = true; video.playsInline = true;
       video.srcObject = stream;
@@ -289,6 +308,10 @@
       const ctx = canvas.getContext('2d', { alpha: false });
       hiddenContainer.appendChild(canvas);
 
+      const sharp = { canvas: document.createElement('canvas') };
+      sharp.canvas.width = width; sharp.canvas.height = height;
+      sharp.ctx = sharp.canvas.getContext('2d');
+
       let active = true;
       let timerId;
       const autoState = { frameCount: 0, levels: { brightness: 100, contrast: 100 } };
@@ -305,7 +328,7 @@
           // outgoing track too, so the call app sees it end instead of
           // freezing on the last frame forever.
           if (videoTrack.readyState === 'ended') { processedTrack.stop(); return; }
-          drawFrameToCanvas(ctx, video, video.videoWidth, width, height, autoState);
+          drawFrameToCanvas(ctx, video, video.videoWidth, width, height, autoState, sharp, nativeBlurApplied);
       }
       draw();
       // setInterval, not requestAnimationFrame: rAF is fully suspended once
@@ -321,10 +344,15 @@
       const videoTrack = stream.getVideoTracks()[0];
       if (!videoTrack) return createSyntheticStream();
 
+      // Set when the getUserMedia call below actually got the OS/browser to
+      // blur the background itself — the ML fallback in drawFrameToCanvas
+      // then has nothing to do.
+      const nativeBlurApplied = state.backgroundBlur && !!videoTrack.getSettings().backgroundBlur;
+
       if (typeof MediaStreamTrackProcessor !== 'undefined') {
-          return processStreamViaTrackProcessor(stream, videoTrack);
+          return processStreamViaTrackProcessor(stream, videoTrack, nativeBlurApplied);
       }
-      return processStreamViaVideoElement(stream, videoTrack);
+      return processStreamViaVideoElement(stream, videoTrack, nativeBlurApplied);
   }
 
   if (navigator.mediaDevices) {
@@ -363,11 +391,14 @@
               matchesVirtualDevice(constraints.video.deviceId);
 
           if (requestedVirtual) {
-              const realConstraints = { 
-                  audio: constraints.audio, 
-                  video: { width: { ideal: 1280 }, height: { ideal: 720 } } 
+              const realConstraints = {
+                  audio: constraints.audio,
+                  video: { width: { ideal: 1280 }, height: { ideal: 720 } }
               };
-              
+              if (state.backgroundBlur && window.NoriBgBlur && window.NoriBgBlur.supportsNativeBlur()) {
+                  realConstraints.video.backgroundBlur = true;
+              }
+
               try {
                   const realStream = await origGUM(realConstraints);
                   return await processStream(realStream);

@@ -24,8 +24,77 @@ document.addEventListener("DOMContentLoaded", () => {
   const flipVInput = document.getElementById("flipvertical");
   const flipHInput = document.getElementById("fliphorizontal");
   const resetCanvasBtn = document.getElementById("resetCanvasBtn");
+  const backgroundBlurInput = document.getElementById("backgroundBlur");
+  const blurStrengthInput = document.getElementById("blurstrengthrange");
 
-  const CANVAS_DEFAULTS = { scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false };
+  // Grid lines are a preview-only composition aid — stored in localStorage
+  // (like the theme) rather than the synced `config`, so there's no path
+  // for them to ever reach the actual outgoing camera feed in inject.js.
+  const gridToggle = document.getElementById("gridToggle");
+  gridToggle.checked = localStorage.getItem("nori-grid") === "1";
+  gridToggle.addEventListener("change", () => {
+      localStorage.setItem("nori-grid", gridToggle.checked ? "1" : "0");
+  });
+
+  // Controls (Ring Light)
+  const ringLightToggle = document.getElementById("ringLightToggle");
+  const ringLightColorInput = document.getElementById("ringLightColor");
+  const ringLightColorPill = document.getElementById("ringLightColorPill");
+  const ringLightColorVal = document.getElementById("ringLightColorVal");
+  const ringLightPresetChips = document.querySelectorAll("#ringLightPresets .color-chip");
+  const ringLightIntensityInput = document.getElementById("ringLightIntensity");
+  const ringLightStyleGroup = document.getElementById("ringLightStyleGroup");
+  const ringLightStyleBtns = ringLightStyleGroup ? ringLightStyleGroup.querySelectorAll(".segmented-btn") : [];
+  let ringLightStyle = "gradient";
+
+  function setRingLightColor(color) {
+      ringLightColorInput.value = color;
+      if (ringLightColorPill) ringLightColorPill.style.backgroundColor = color;
+      if (ringLightColorVal) ringLightColorVal.textContent = color.toUpperCase();
+      ringLightPresetChips.forEach(chip => {
+          chip.classList.toggle("active", chip.dataset.color.toLowerCase() === color.toLowerCase());
+      });
+  }
+
+  ringLightColorInput.addEventListener("input", () => {
+      setRingLightColor(ringLightColorInput.value);
+  });
+
+  ringLightPresetChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+          setRingLightColor(chip.dataset.color);
+          saveConfig();
+      });
+  });
+
+  function setRingLightStyle(style) {
+      ringLightStyle = style;
+      ringLightStyleBtns.forEach(btn => btn.classList.toggle("active", btn.dataset.style === style));
+  }
+
+  ringLightStyleBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+          setRingLightStyle(btn.dataset.style);
+          saveConfig();
+      });
+  });
+
+  ringLightToggle.addEventListener("change", () => {
+      saveConfig();
+  });
+
+  const RING_LIGHT_DEFAULTS = { ringLight: false, ringLightColor: "#fff4e6", ringLightIntensity: 50, ringLightStyle: "gradient" };
+  document.getElementById("resetRingLightBtn").addEventListener("click", () => {
+      ringLightToggle.checked = RING_LIGHT_DEFAULTS.ringLight;
+      setRingLightColor(RING_LIGHT_DEFAULTS.ringLightColor);
+      ringLightIntensityInput.value = RING_LIGHT_DEFAULTS.ringLightIntensity;
+      const intensityText = document.getElementById("ringlightintensitytext");
+      if (intensityText) intensityText.innerText = RING_LIGHT_DEFAULTS.ringLightIntensity + "%";
+      setRingLightStyle(RING_LIGHT_DEFAULTS.ringLightStyle);
+      saveConfig();
+  });
+
+  const CANVAS_DEFAULTS = { scale: 1.2, panX: 0, panY: 0, rotation: 0, flipH: false, flipV: false, backgroundBlur: false, backgroundBlurStrength: 50 };
   resetCanvasBtn.addEventListener("click", () => {
       scaleInput.value = CANVAS_DEFAULTS.scale;
       panXInput.value = CANVAS_DEFAULTS.panX;
@@ -33,7 +102,10 @@ document.addEventListener("DOMContentLoaded", () => {
       rotateInput.value = CANVAS_DEFAULTS.rotation;
       flipHInput.checked = CANVAS_DEFAULTS.flipH;
       flipVInput.checked = CANVAS_DEFAULTS.flipV;
+      backgroundBlurInput.checked = CANVAS_DEFAULTS.backgroundBlur;
+      blurStrengthInput.value = CANVAS_DEFAULTS.backgroundBlurStrength;
       saveConfig();
+      startPreview(); // blur toggled off may need to drop the native constraint
   });
 
   // Controls (Filters)
@@ -47,15 +119,56 @@ document.addEventListener("DOMContentLoaded", () => {
   // existing sliders; grayscale/sepia/hueRotate are extra ctx.filter
   // components with no dedicated slider (kept simple/"basic" on purpose).
   const FILTER_PRESETS = {
-      normal:  { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, sepia: 0, hueRotate: 0 },
-      fixtint: { brightness: 108, contrast: 108, saturation: 110, grayscale: 0, sepia: 0, hueRotate: -6 },
-      warm:    { brightness: 103, contrast: 102, saturation: 115, grayscale: 0, sepia: 18, hueRotate: -4 },
-      cool:    { brightness: 100, contrast: 104, saturation: 105, grayscale: 0, sepia: 0, hueRotate: 10 },
-      bw:      { brightness: 105, contrast: 115, saturation: 100, grayscale: 100, sepia: 0, hueRotate: 0 },
-      vivid:   { brightness: 105, contrast: 118, saturation: 145, grayscale: 0, sepia: 0, hueRotate: 0 }
+      normal:    { brightness: 100, contrast: 100, saturation: 100, grayscale: 0,   sepia: 0,  hueRotate: 0 },
+      fixtint:   { brightness: 108, contrast: 108, saturation: 110, grayscale: 0,   sepia: 0,  hueRotate: -6 },
+      warm:      { brightness: 103, contrast: 102, saturation: 115, grayscale: 0,   sepia: 18, hueRotate: -4 },
+      cool:      { brightness: 100, contrast: 104, saturation: 105, grayscale: 0,   sepia: 0,  hueRotate: 10 },
+      vivid:     { brightness: 105, contrast: 118, saturation: 145, grayscale: 0,   sepia: 0,  hueRotate: 0 },
+      fade:      { brightness: 110, contrast: 85,  saturation: 82,  grayscale: 0,   sepia: 10, hueRotate: 0 },
+      vintage:   { brightness: 102, contrast: 92,  saturation: 88,  grayscale: 0,   sepia: 38, hueRotate: -8 },
+      mono:      { brightness: 105, contrast: 112, saturation: 100, grayscale: 100, sepia: 0,  hueRotate: 0 },
+      noir:      { brightness: 95,  contrast: 138, saturation: 100, grayscale: 100, sepia: 0,  hueRotate: 0 },
+      cinematic: { brightness: 94,  contrast: 126, saturation: 88,  grayscale: 0,   sepia: 0,  hueRotate: -10 },
+      chrome:    { brightness: 108, contrast: 122, saturation: 150, grayscale: 0,   sepia: 0,  hueRotate: 15 }
   };
   let grayscaleValue = 0, sepiaValue = 0, hueRotateValue = 0;
   let currentPresetName = "normal";
+
+  function filterStringForPreset(name) {
+      const p = FILTER_PRESETS[name];
+      return `brightness(${p.brightness}%) contrast(${p.contrast}%) saturate(${p.saturation}%) grayscale(${p.grayscale}%) sepia(${p.sepia}%) hue-rotate(${p.hueRotate}deg)`;
+  }
+
+  // Live thumbnails: each swatch shows the actual camera feed with that
+  // preset's filter applied, instead of an abstract color chip, so picking
+  // one shows what it will really look like on you.
+  const swatchPreviews = Array.from(filterSwatches).map(btn => ({
+      preset: btn.dataset.preset,
+      canvas: btn.querySelector(".swatch-preview"),
+      ctx: btn.querySelector(".swatch-preview").getContext("2d")
+  }));
+  let swatchPreviewFrame = 0;
+
+  function drawSwatchPreviews() {
+      swatchPreviewFrame++;
+      if (swatchPreviewFrame % 4 !== 0) return; // thumbnails don't need full frame rate
+
+      swatchPreviews.forEach(({ preset, canvas: c, ctx: sctx }) => {
+          const size = c.width;
+          sctx.save();
+          if (isSynthetic || !maincam.videoWidth) {
+              sctx.filter = "none";
+              sctx.fillStyle = "#2d3436";
+              sctx.fillRect(0, 0, size, size);
+          } else {
+              sctx.filter = filterStringForPreset(preset);
+              const vW = maincam.videoWidth, vH = maincam.videoHeight;
+              const side = Math.min(vW, vH);
+              sctx.drawImage(maincam, (vW - side) / 2, (vH - side) / 2, side, side, 0, 0, size, size);
+          }
+          sctx.restore();
+      });
+  }
 
   function setActiveSwatch(name) {
       filterSwatches.forEach(btn => btn.classList.toggle("active", btn.dataset.preset === name));
@@ -112,7 +225,16 @@ document.addEventListener("DOMContentLoaded", () => {
   canvas.width = 1280;
   canvas.height = 720;
   let isSynthetic = false;
-  
+
+  // Sharp (fully rotated/flipped/filtered/panned, pre-overlay) frame, drawn
+  // here first so background blur can composite from it rather than the raw
+  // <video> element — matches the transformed pixels the user actually sees.
+  const sharpCanvas = document.createElement("canvas");
+  const sharpCtx = sharpCanvas.getContext("2d");
+  // Set once a stream is (re)acquired with the native `backgroundBlur`
+  // constraint actually applied — skips the ML fallback compositing.
+  let nativeBlurApplied = false;
+
   // State
   let overlays = {
       texts: [],
@@ -230,13 +352,19 @@ document.addEventListener("DOMContentLoaded", () => {
           brightnessInput.value = config.brightness ?? 100;
           contrastInput.value = config.contrast ?? 100;
           saturationInput.value = config.saturation ?? 100;
-          grayscaleValue = config.grayscale || 0;
-          sepiaValue = config.sepia || 0;
-          hueRotateValue = config.hueRotate || 0;
-          currentPresetName = config.filterPreset || "normal";
+          grayscaleValue = 0;
+          sepiaValue = 0;
+          hueRotateValue = 0;
+          currentPresetName = "normal";
           setActiveSwatch(currentPresetName);
           autoEnhanceInput.checked = !!config.autoEnhance;
           updateAutoEnhanceUI();
+          backgroundBlurInput.checked = false; // Feature unavailable (under development)
+          blurStrengthInput.value = config.backgroundBlurStrength ?? 50;
+          ringLightToggle.checked = !!config.ringLight;
+          setRingLightColor(config.ringLightColor || "#fff4e6");
+          ringLightIntensityInput.value = config.ringLightIntensity ?? 50;
+          setRingLightStyle(config.ringLightStyle || "gradient");
 
           // Overlays
           overlays.texts = config.texts || [];
@@ -265,11 +393,17 @@ document.addEventListener("DOMContentLoaded", () => {
           brightness: parseFloat(brightnessInput.value),
           contrast: parseFloat(contrastInput.value),
           saturation: parseFloat(saturationInput.value),
-          grayscale: grayscaleValue,
-          sepia: sepiaValue,
-          hueRotate: hueRotateValue,
-          filterPreset: currentPresetName,
+          grayscale: 0,
+          sepia: 0,
+          hueRotate: 0,
+          filterPreset: "normal",
           autoEnhance: autoEnhanceInput.checked,
+          backgroundBlur: false, // Feature unavailable (under development)
+          backgroundBlurStrength: parseFloat(blurStrengthInput.value),
+          ringLight: ringLightToggle.checked,
+          ringLightColor: ringLightColorInput.value,
+          ringLightIntensity: parseFloat(ringLightIntensityInput.value),
+          ringLightStyle: ringLightStyle,
           texts: overlays.texts,
           images: overlays.images
       };
@@ -291,6 +425,8 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("contrasttext").innerText = contrastInput.value + "%";
       }
       document.getElementById("saturationtext").innerText = saturationInput.value + "%";
+      document.getElementById("blurstrengthtext").innerText = blurStrengthInput.value + "%";
+      document.getElementById("ringlightintensitytext").innerText = ringLightIntensityInput.value + "%";
   }
 
   // --- Listeners (Basic) ---
@@ -321,6 +457,20 @@ document.addEventListener("DOMContentLoaded", () => {
       startPreview();
   });
 
+  // Toggling blur may need to renegotiate the stream (to try the native
+  // constraint); the strength slider just changes the ML fallback's draw.
+  backgroundBlurInput.addEventListener('change', () => {
+      saveConfig();
+      startPreview();
+  });
+  blurStrengthInput.addEventListener('input', saveConfig);
+
+  // Ring Light applies straight from chrome.storage via ringlight.js on
+  // whatever page the user is on — no stream renegotiation needed here.
+  [ringLightToggle, ringLightColorInput, ringLightIntensityInput].forEach(el => {
+      el.addEventListener('input', saveConfig);
+  });
+
 
   // --- Text Overlay Logic ---
   addTextBtn.addEventListener("click", () => {
@@ -343,45 +493,109 @@ document.addEventListener("DOMContentLoaded", () => {
       renderTextList();
   });
 
+  function escapeAttr(str) {
+      return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+  }
+
   function renderTextList() {
       clearTextBtn.disabled = overlays.texts.length === 0;
       textList.innerHTML = "";
+      if (overlays.texts.length === 0) {
+          textList.innerHTML = `<div class="empty-hint">No text overlays added yet</div>`;
+          return;
+      }
       overlays.texts.forEach((item, index) => {
           const div = document.createElement("div");
           div.className = "overlay-item";
+          const currentColor = item.color || "#ffffff";
+          const currentRot = item.rotation || 0;
           div.innerHTML = `
-            <div class="overlay-header">
-                <span class="overlay-title">${item.content}</span>
-                <button class="del-btn" data-idx="${index}">×</button>
+            <div class="overlay-card-header">
+                <div class="overlay-card-title-wrap">
+                    <svg class="overlay-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                        <line x1="9" y1="20" x2="15" y2="20"></line>
+                        <line x1="12" y1="4" x2="12" y2="20"></line>
+                    </svg>
+                    <input type="text" class="overlay-text-edit update-text-content" data-idx="${index}" value="${escapeAttr(item.content)}" placeholder="Text content">
+                </div>
+                <button type="button" class="del-btn" data-idx="${index}" title="Delete text overlay">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
             </div>
-            <div class="control-grid">
-                <div class="control-group">
-                    <label>X Position</label>
+            <div class="overlay-controls-grid">
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">X Position</span>
+                        <span class="field-val" id="text-val-x-${index}">${item.x}%</span>
+                    </div>
                     <input type="range" min="0" max="100" class="update-text" data-idx="${index}" data-key="x" value="${item.x}">
                 </div>
-                <div class="control-group">
-                    <label>Y Position</label>
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">Y Position</span>
+                        <span class="field-val" id="text-val-y-${index}">${item.y}%</span>
+                    </div>
                     <input type="range" min="0" max="100" class="update-text" data-idx="${index}" data-key="y" value="${item.y}">
                 </div>
-                <div class="control-group">
-                    <label>Size</label>
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">Size</span>
+                        <span class="field-val" id="text-val-size-${index}">${item.size}px</span>
+                    </div>
                     <input type="range" min="10" max="200" class="update-text" data-idx="${index}" data-key="size" value="${item.size}">
                 </div>
-                <div class="control-group">
-                    <label>Color</label>
-                    <input type="color" class="update-text-color" data-idx="${index}" data-key="color" value="${item.color}">
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">Rotation</span>
+                        <span class="field-val" id="text-val-rotation-${index}">${currentRot}°</span>
+                    </div>
+                    <input type="range" min="-180" max="180" class="update-text" data-idx="${index}" data-key="rotation" value="${currentRot}">
                 </div>
-                <div class="control-group">
-                    <label>Rotation</label>
-                    <input type="range" min="-180" max="180" class="update-text" data-idx="${index}" data-key="rotation" value="${item.rotation || 0}">
+            </div>
+            <div class="overlay-color-section">
+                <div class="field-label-row">
+                    <span class="field-label">Text Color</span>
+                    <div class="color-picker-control small" title="Choose color">
+                        <span class="color-preview-pill" style="background-color: ${currentColor};"></span>
+                        <span class="color-hex-val">${currentColor.toUpperCase()}</span>
+                        <input type="color" class="update-text-color" data-idx="${index}" data-key="color" value="${currentColor}">
+                    </div>
                 </div>
-                <div class="control-group">
-                    <label>Flip H</label>
-                    <input type="checkbox" class="update-text-check" data-idx="${index}" data-key="flipH" ${item.flipH ? "checked" : ""}>
+                <div class="color-presets-row mini" data-idx="${index}">
+                    <button type="button" class="color-chip mini ${currentColor.toLowerCase() === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;" title="White"></button>
+                    <button type="button" class="color-chip mini ${currentColor.toLowerCase() === '#0f172a' ? 'active' : ''}" data-color="#0f172a" style="background: #0f172a;" title="Charcoal"></button>
+                    <button type="button" class="color-chip mini ${currentColor.toLowerCase() === '#f59e0b' ? 'active' : ''}" data-color="#f59e0b" style="background: #f59e0b;" title="Amber"></button>
+                    <button type="button" class="color-chip mini ${currentColor.toLowerCase() === '#ef4444' ? 'active' : ''}" data-color="#ef4444" style="background: #ef4444;" title="Red"></button>
+                    <button type="button" class="color-chip mini ${currentColor.toLowerCase() === '#10b981' ? 'active' : ''}" data-color="#10b981" style="background: #10b981;" title="Emerald"></button>
+                    <button type="button" class="color-chip mini ${currentColor.toLowerCase() === '#2563eb' ? 'active' : ''}" data-color="#2563eb" style="background: #2563eb;" title="Classic Blue"></button>
+                    <button type="button" class="color-chip mini ${currentColor.toLowerCase() === '#64748b' ? 'active' : ''}" data-color="#64748b" style="background: #64748b;" title="Slate"></button>
                 </div>
-                <div class="control-group">
-                    <label>Flip V</label>
-                    <input type="checkbox" class="update-text-check" data-idx="${index}" data-key="flipV" ${item.flipV ? "checked" : ""}>
+            </div>
+            <div class="overlay-flips-bar">
+                <div class="overlay-flip-toggle">
+                    <label for="text-fliph-${index}" class="flip-toggle-label">Flip Horiz</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="text-fliph-${index}" class="update-text-check" data-idx="${index}" data-key="flipH" ${item.flipH ? "checked" : ""}>
+                        <label for="text-fliph-${index}">Toggle</label>
+                    </div>
+                </div>
+                <div class="overlay-flip-toggle">
+                    <label for="text-flipv-${index}" class="flip-toggle-label">Flip Vert</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="text-flipv-${index}" class="update-text-check" data-idx="${index}" data-key="flipV" ${item.flipV ? "checked" : ""}>
+                        <label for="text-flipv-${index}">Toggle</label>
+                    </div>
                 </div>
             </div>
           `;
@@ -389,31 +603,77 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       document.querySelectorAll(".del-btn").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-              overlays.texts.splice(e.target.dataset.idx, 1);
+          btn.addEventListener("click", () => {
+              const idx = parseInt(btn.dataset.idx, 10);
+              overlays.texts.splice(idx, 1);
               saveConfig();
               renderTextList();
           });
       });
+      document.querySelectorAll(".update-text-content").forEach(input => {
+          input.addEventListener("input", (e) => {
+              const idx = parseInt(e.target.dataset.idx, 10);
+              overlays.texts[idx].content = e.target.value;
+              saveConfig();
+          });
+      });
       document.querySelectorAll(".update-text").forEach(input => {
           input.addEventListener("input", (e) => {
-              const idx = e.target.dataset.idx;
+              const idx = parseInt(e.target.dataset.idx, 10);
               const key = e.target.dataset.key;
-              overlays.texts[idx][key] = parseFloat(e.target.value);
+              const val = parseFloat(e.target.value);
+              overlays.texts[idx][key] = val;
+              const badge = document.getElementById(`text-val-${key}-${idx}`);
+              if (badge) {
+                  const unit = (key === 'x' || key === 'y') ? '%' : (key === 'size' ? 'px' : '°');
+                  badge.textContent = `${val}${unit}`;
+              }
               saveConfig();
           });
       });
       document.querySelectorAll(".update-text-color").forEach(input => {
           input.addEventListener("input", (e) => {
-              const idx = e.target.dataset.idx;
+              const idx = parseInt(e.target.dataset.idx, 10);
               const key = e.target.dataset.key;
-              overlays.texts[idx][key] = e.target.value;
+              const val = e.target.value;
+              overlays.texts[idx][key] = val;
+              const parent = e.target.closest(".overlay-color-section");
+              if (parent) {
+                  const pill = parent.querySelector(".color-preview-pill");
+                  const hex = parent.querySelector(".color-hex-val");
+                  if (pill) pill.style.backgroundColor = val;
+                  if (hex) hex.textContent = val.toUpperCase();
+                  parent.querySelectorAll(".color-chip").forEach(c => {
+                      c.classList.toggle("active", c.dataset.color.toLowerCase() === val.toLowerCase());
+                  });
+              }
+              saveConfig();
+          });
+      });
+      document.querySelectorAll(".overlay-color-section .color-presets-row.mini .color-chip").forEach(chip => {
+          chip.addEventListener("click", (e) => {
+              e.preventDefault();
+              const row = chip.closest(".color-presets-row");
+              const idx = parseInt(row.dataset.idx, 10);
+              const color = chip.dataset.color;
+              overlays.texts[idx].color = color;
+              const parent = row.closest(".overlay-color-section");
+              if (parent) {
+                  const input = parent.querySelector(".update-text-color");
+                  const pill = parent.querySelector(".color-preview-pill");
+                  const hex = parent.querySelector(".color-hex-val");
+                  if (input) input.value = color;
+                  if (pill) pill.style.backgroundColor = color;
+                  if (hex) hex.textContent = color.toUpperCase();
+                  row.querySelectorAll(".color-chip").forEach(c => c.classList.remove("active"));
+                  chip.classList.add("active");
+              }
               saveConfig();
           });
       });
       document.querySelectorAll(".update-text-check").forEach(input => {
           input.addEventListener("change", (e) => {
-              const idx = e.target.dataset.idx;
+              const idx = parseInt(e.target.dataset.idx, 10);
               const key = e.target.dataset.key;
               overlays.texts[idx][key] = e.target.checked;
               saveConfig();
@@ -423,7 +683,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // --- Image Overlay Logic ---
-  const imageUploadLabel = newImageInput.closest(".file-upload-btn");
+  const imageUploadLabel = newImageInput.closest(".file-upload-bar") || newImageInput.closest(".file-upload-btn");
   if (imageUploadLabel && !isStandalone) {
       imageUploadLabel.addEventListener("click", (e) => {
           e.preventDefault();
@@ -458,9 +718,11 @@ document.addEventListener("DOMContentLoaded", () => {
               overlays.images.push({
                   id: Date.now(),
                   src: dataUrl,
+                  name: (file && file.name) ? file.name.replace(/\.[^/.]+$/, "") : `Image #${overlays.images.length + 1}`,
                   x: 50,
                   y: 50,
                   scale: 1.0,
+                  opacity: 100,
                   rotation: 0,
                   flipH: false,
                   flipV: false
@@ -477,38 +739,81 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderImageList() {
       clearImageBtn.disabled = overlays.images.length === 0;
       imageList.innerHTML = "";
+      if (overlays.images.length === 0) {
+          imageList.innerHTML = `<div class="empty-hint">No image overlays added yet</div>`;
+          return;
+      }
       overlays.images.forEach((item, index) => {
           const div = document.createElement("div");
           div.className = "overlay-item";
+          const currentRot = item.rotation || 0;
+          const currentOpacity = item.opacity !== undefined ? item.opacity : 100;
           div.innerHTML = `
-            <div class="overlay-header">
-                <img src="${item.src}" class="overlay-thumb">
-                <button class="del-img-btn" data-idx="${index}">×</button>
+            <div class="overlay-card-header">
+                <div class="overlay-card-title-wrap">
+                    <img src="${item.src}" class="overlay-thumb" alt="Overlay preview">
+                    <input type="text" class="overlay-text-edit update-img-name" data-idx="${index}" value="${escapeAttr(item.name || `Image #${index + 1}`)}" placeholder="Image label">
+                </div>
+                <button type="button" class="del-img-btn" data-idx="${index}" title="Delete image overlay">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
             </div>
-            <div class="control-grid">
-                <div class="control-group">
-                    <label>X Position</label>
+            <div class="overlay-controls-grid">
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">X Position</span>
+                        <span class="field-val" id="img-val-x-${index}">${item.x}%</span>
+                    </div>
                     <input type="range" min="0" max="100" class="update-img" data-idx="${index}" data-key="x" value="${item.x}">
                 </div>
-                <div class="control-group">
-                    <label>Y Position</label>
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">Y Position</span>
+                        <span class="field-val" id="img-val-y-${index}">${item.y}%</span>
+                    </div>
                     <input type="range" min="0" max="100" class="update-img" data-idx="${index}" data-key="y" value="${item.y}">
                 </div>
-                <div class="control-group">
-                    <label>Scale</label>
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">Scale</span>
+                        <span class="field-val" id="img-val-scale-${index}">${item.scale}x</span>
+                    </div>
                     <input type="range" min="0.1" max="3" step="0.1" class="update-img" data-idx="${index}" data-key="scale" value="${item.scale}">
                 </div>
-                <div class="control-group">
-                    <label>Rotation</label>
-                    <input type="range" min="-180" max="180" class="update-img" data-idx="${index}" data-key="rotation" value="${item.rotation || 0}">
+                <div class="overlay-field">
+                    <div class="field-label-row">
+                        <span class="field-label">Rotation</span>
+                        <span class="field-val" id="img-val-rotation-${index}">${currentRot}°</span>
+                    </div>
+                    <input type="range" min="-180" max="180" class="update-img" data-idx="${index}" data-key="rotation" value="${currentRot}">
                 </div>
-                <div class="control-group">
-                    <label>Flip H</label>
-                    <input type="checkbox" class="update-img-check" data-idx="${index}" data-key="flipH" ${item.flipH ? "checked" : ""}>
+            </div>
+            <div class="overlay-color-section">
+                <div class="field-label-row">
+                    <span class="field-label">Opacity</span>
+                    <span class="field-val" id="img-val-opacity-${index}">${currentOpacity}%</span>
                 </div>
-                <div class="control-group">
-                    <label>Flip V</label>
-                    <input type="checkbox" class="update-img-check" data-idx="${index}" data-key="flipV" ${item.flipV ? "checked" : ""}>
+                <input type="range" min="5" max="100" class="update-img" data-idx="${index}" data-key="opacity" value="${currentOpacity}">
+            </div>
+            <div class="overlay-flips-bar">
+                <div class="overlay-flip-toggle">
+                    <label for="img-fliph-${index}" class="flip-toggle-label">Flip Horiz</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="img-fliph-${index}" class="update-img-check" data-idx="${index}" data-key="flipH" ${item.flipH ? "checked" : ""}>
+                        <label for="img-fliph-${index}">Toggle</label>
+                    </div>
+                </div>
+                <div class="overlay-flip-toggle">
+                    <label for="img-flipv-${index}" class="flip-toggle-label">Flip Vert</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="img-flipv-${index}" class="update-img-check" data-idx="${index}" data-key="flipV" ${item.flipV ? "checked" : ""}>
+                        <label for="img-flipv-${index}">Toggle</label>
+                    </div>
                 </div>
             </div>
           `;
@@ -516,23 +821,37 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       document.querySelectorAll(".del-img-btn").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-              overlays.images.splice(e.target.dataset.idx, 1);
+          btn.addEventListener("click", () => {
+              const idx = parseInt(btn.dataset.idx, 10);
+              overlays.images.splice(idx, 1);
               saveConfig();
               renderImageList();
           });
       });
+      document.querySelectorAll(".update-img-name").forEach(input => {
+          input.addEventListener("input", (e) => {
+              const idx = parseInt(e.target.dataset.idx, 10);
+              overlays.images[idx].name = e.target.value;
+              saveConfig();
+          });
+      });
       document.querySelectorAll(".update-img").forEach(input => {
           input.addEventListener("input", (e) => {
-              const idx = e.target.dataset.idx;
+              const idx = parseInt(e.target.dataset.idx, 10);
               const key = e.target.dataset.key;
-              overlays.images[idx][key] = parseFloat(e.target.value);
+              const val = parseFloat(e.target.value);
+              overlays.images[idx][key] = val;
+              const badge = document.getElementById(`img-val-${key}-${idx}`);
+              if (badge) {
+                  const unit = (key === 'x' || key === 'y' || key === 'opacity') ? '%' : (key === 'scale' ? 'x' : '°');
+                  badge.textContent = `${val}${unit}`;
+              }
               saveConfig();
           });
       });
       document.querySelectorAll(".update-img-check").forEach(input => {
           input.addEventListener("change", (e) => {
-              const idx = e.target.dataset.idx;
+              const idx = parseInt(e.target.dataset.idx, 10);
               const key = e.target.dataset.key;
               overlays.images[idx][key] = e.target.checked;
               saveConfig();
@@ -565,12 +884,22 @@ document.addEventListener("DOMContentLoaded", () => {
             height: { ideal: 900 }
         }
     };
+    const wantsBlur = false; // Feature unavailable (under development)
+    if (wantsBlur && window.NoriBgBlur && window.NoriBgBlur.supportsNativeBlur()) {
+        constraints.video.backgroundBlur = true;
+    }
 
     try {
       previewStream = await navigator.mediaDevices.getUserMedia(constraints);
       maincam.srcObject = previewStream;
       maincam.play();
       cpermitionEl.style.display = "none";
+      const track = previewStream.getVideoTracks()[0];
+      nativeBlurApplied = wantsBlur && !!(track && track.getSettings().backgroundBlur);
+      // Kick off the (slow, one-time) model load now rather than on the
+      // first frame that needs it, so the fallback doesn't stall the draw
+      // loop if the native constraint above wasn't honored.
+      if (wantsBlur && !nativeBlurApplied && window.NoriBgBlur) window.NoriBgBlur.ensureSegmenter();
       drawPreview();
     } catch (error) {
       console.warn("Camera failed, using synthetic", error);
@@ -587,6 +916,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!isSynthetic && (maincam.paused || maincam.ended)) {
           setTimeout(drawPreview, 1000 / 30);
           return;
+      }
+
+      if (swatchPreviews.length > 0) {
+          drawSwatchPreviews();
       }
 
       // Keep the canvas resolution matched to the real feed's native size
@@ -616,19 +949,27 @@ document.addEventListener("DOMContentLoaded", () => {
           ctx.textBaseline = "middle";
           ctx.fillText("No Signal", canvas.width/2, canvas.height/2);
       } else {
+          if (sharpCanvas.width !== canvas.width || sharpCanvas.height !== canvas.height) {
+              sharpCanvas.width = canvas.width;
+              sharpCanvas.height = canvas.height;
+          }
+          sharpCtx.save();
+          sharpCtx.fillStyle = "#000000";
+          sharpCtx.fillRect(0, 0, canvas.width, canvas.height);
+
           const camRotation = parseFloat(rotateInput.value) || 0;
           if (camRotation) {
-              ctx.translate(canvas.width / 2, canvas.height / 2);
-              ctx.rotate(camRotation * Math.PI / 180);
-              ctx.translate(-canvas.width / 2, -canvas.height / 2);
+              sharpCtx.translate(canvas.width / 2, canvas.height / 2);
+              sharpCtx.rotate(camRotation * Math.PI / 180);
+              sharpCtx.translate(-canvas.width / 2, -canvas.height / 2);
           }
           if (flipHInput.checked) {
-              ctx.translate(canvas.width, 0);
-              ctx.scale(-1, 1);
+              sharpCtx.translate(canvas.width, 0);
+              sharpCtx.scale(-1, 1);
           }
           if (flipVInput.checked) {
-              ctx.translate(0, canvas.height);
-              ctx.scale(1, -1);
+              sharpCtx.translate(0, canvas.height);
+              sharpCtx.scale(1, -1);
           }
 
           const useAuto = autoEnhanceInput.checked;
@@ -642,7 +983,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const brightness = useAuto ? autoLevels.brightness : parseFloat(brightnessInput.value);
           const contrast = useAuto ? autoLevels.contrast : parseFloat(contrastInput.value);
           const saturation = parseFloat(saturationInput.value);
-          ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${grayscaleValue}%) sepia(${sepiaValue}%) hue-rotate(${hueRotateValue}deg)`;
+          sharpCtx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${grayscaleValue}%) sepia(${sepiaValue}%) hue-rotate(${hueRotateValue}deg)`;
 
           const vW = maincam.videoWidth;
           const previewRatio = canvas.width / vW;
@@ -652,7 +993,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const x = (canvas.width/2) - (sw/2) + (parseFloat(panXInput.value) * previewRatio);
           const y = (canvas.height/2) - (sh/2) + (parseFloat(panYInput.value) * previewRatio);
 
-          ctx.drawImage(maincam, x, y, sw, sh);
+          sharpCtx.drawImage(maincam, x, y, sw, sh);
+          sharpCtx.restore();
+
+          if (backgroundBlurInput.checked && !nativeBlurApplied && window.NoriBgBlur) {
+              window.NoriBgBlur.composite(ctx, sharpCanvas, canvas.width, canvas.height, parseFloat(blurStrengthInput.value), ctx);
+          } else {
+              ctx.drawImage(sharpCanvas, 0, 0);
+          }
       }
 
       ctx.restore(); // Restore flip/rotate/filter context (must always pair with the save() above)
@@ -676,6 +1024,7 @@ document.addEventListener("DOMContentLoaded", () => {
               if (img.rotation) ctx.rotate(img.rotation * Math.PI / 180);
               if (img.flipH) ctx.scale(-1, 1);
               if (img.flipV) ctx.scale(1, -1);
+              ctx.globalAlpha = (img.opacity !== undefined ? img.opacity : 100) / 100;
               ctx.drawImage(i, -w/2, -h/2, w, h);
               ctx.restore();
           }
@@ -703,6 +1052,24 @@ document.addEventListener("DOMContentLoaded", () => {
           ctx.fillText(txt.content, 0, 0);
           ctx.restore();
       });
+
+      // 5. Grid Lines (preview only — never drawn in inject.js's output)
+      if (gridToggle.checked) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (let i = 1; i < 3; i++) {
+              const gx = (canvas.width / 3) * i;
+              ctx.moveTo(gx, 0);
+              ctx.lineTo(gx, canvas.height);
+              const gy = (canvas.height / 3) * i;
+              ctx.moveTo(0, gy);
+              ctx.lineTo(canvas.width, gy);
+          }
+          ctx.stroke();
+          ctx.restore();
+      }
 
       // setTimeout, not requestAnimationFrame: rAF is fully suspended once
       // the popup/popout window is hidden or loses focus, which froze the

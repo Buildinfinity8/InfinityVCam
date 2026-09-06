@@ -47,7 +47,7 @@ function updateNotifsUI() {
   var ns = "";
   notifs.forEach((elem) => {
     ns += `<div class="notifications" style="background-color: ${elem.color}">
-        <img src="files/images/${elem.type}.png" alt="${elem.type}" height="10" />
+        <img src="files/images/${elem.type}.svg" alt="${elem.type}" height="10" />
         <span>${elem.text}</span>
       </div>`;
   });
